@@ -15,9 +15,24 @@ The first chapter explains how image patches become contextual representations i
 The root page is a simple learning notebook with three ordered chapter links:
 1. [Polo Club’s Transformer Explainer](https://poloclub.github.io/transformer-explainer/) — external text-transformer guide.
 2. [Vision encoders](https://apravesh.github.io/llm-explainer/vision.html) — this project’s interactive ViT/Pixtral chapter.
-3. [Mixture of Experts](https://apravesh.github.io/llm-explainer/moe.html) — a “Currently under construction” page, not an implemented explainer.
+3. [Mixture of Experts](https://apravesh.github.io/llm-explainer/moe.html) — a minimal interactive sparse FFN with top-1/top-2 routing.
 
-The existing vision chapter is preserved at `vision.html`, with links back to the homepage. `standalone.html` remains the complete offline vision explainer. Homepage and placeholder use the lightweight `journal.css`; they require no JavaScript.
+The existing vision chapter is preserved at `vision.html`, with links back to the homepage. `standalone.html` remains the complete offline vision explainer. The homepage uses lightweight `journal.css` without JavaScript. The MoE chapter uses `moe.css` and two independent JavaScript modules.
+
+## Chapter 03: the simplest useful MoE layer
+
+`moe.html` runs one **untrained sparse feed-forward sublayer**, not a language model checkpoint. It has eight hidden features, four bias-free expert MLPs (8 → 16 → 8 with GELU), a bias-free router (8 → 4), shared input LayerNorm, and a residual connection. The router and experts use deterministic random weights.
+
+- **Top-1 by default:** select one expert. The default selected-normalized gate is exactly 1. Top-2 shows a genuine weighted mixture of two outputs.
+- **Router inspector:** actual hidden state × router weights, logits, softmax probabilities, selected experts, and gates. Choose selected-normalized weights or retained full-softmax probabilities. This deliberate convention choice is disclosed; the demo is not an exact implementation of Switch or Mixtral.
+- **Expert inspector:** inspect both actual matrix multiplications of any active expert. Unselected experts are not evaluated and show “Not run” instead of fabricated activations.
+- **Token context:** a selectable token column stays beside the flow. Example labels are whitespace-separated (maximum 12). Synthetic hidden states are seeded by label and position; no pretrained tokenization, embedding, or attention is run. Edit the eight input values to see routing change.
+- **Combination and output:** sum gate × expert output, then add the original input. Expert outputs are added, not concatenated. No text is generated.
+- **Batch view:** token-to-expert assignments and load counts update with all controls. Top-2 gives twice as many assignments as tokens. No capacity limit, dropped tokens, distributed dispatch, load balancing, training, or semantic specialization is simulated.
+- **Dense comparison:** use expert 1 as one standalone same-width MLP, bypassing the router. It is not an equal-total-parameter comparison. Stored weights and linear MACs make the distinction explicit: dense 256; sparse top-1 1,056 stored / 288 active MACs; top-2 544 MACs.
+- **Animation:** trace input → router → selected experts → mixture → residual. It is cancellable and disabled for reduced motion. The diagram stays visible while any detailed inspector is open.
+
+References: [Switch Transformer](https://www.jmlr.org/papers/v23/21-0998.html), [Sparsely-gated MoE](https://arxiv.org/abs/1701.06538), and [Mixtral of Experts](https://arxiv.org/abs/2401.04088).
 
 ## Open instantly
 
@@ -138,8 +153,11 @@ Manual browser checks cover in-place expansion/collapse, pixels and channels, ou
 
 - `index.html` — learning homepage and the ordered chapter links
 - `vision.html` — interactive vision chapter structure and educational content
-- `moe.html` — honest under-construction placeholder
-- `journal.css` — simple shared notebook styles
+- `moe.html` — interactive mixture-of-experts chapter
+- `moe.css` — MoE diagram and responsive inspection layout
+- `src/moe-engine.mjs` — deterministic sparse router, selected-only experts, combination, dense baseline, and counts
+- `src/moe-app.mjs` — MoE controls, animations, routing maps, and numerical inspectors
+- `journal.css` — simple notebook homepage styles
 - `styles.css` — responsive visual system
 - `src/app.mjs` — controls, image preprocessing, visualizations, and inspection
 - `src/engine.mjs` — testable, deterministic numerical model with inspectable weight and activation traces
@@ -156,6 +174,8 @@ Manual browser checks cover in-place expansion/collapse, pixels and channels, ou
 - `tests/attention-flow.test.mjs` — causal normalization, output equivalence, immutable encoder data, partial sums, and attention detail tests
 - `tests/multi-head.test.mjs` — feature-split shapes, full-input projections, head order, exact merge/residual identities, and immutable comparisons
 - `tests/readout.test.mjs` — seven-stage navigation, final-vector identities, CLS trajectory, patch ordering and delimiters, projector traces, and immutable symbolic generation
+- `tests/moe.test.mjs` — routing, sparse execution, exact weighted sums, dense baseline, cost counts, input validation, and chapter disclosures
+- `tests/home.test.mjs` — chapter routes and homepage integrity
 - `server.mjs` — dependency-free local HTTP server
 - `build.mjs` — generates the self-contained `standalone.html`
 - `standalone.html` — portable, fully offline website
@@ -166,7 +186,7 @@ After editing the source, regenerate the offline build with `node build.mjs`.
 
 GitHub Pages is configured to deploy from **main / (root)**. Pushing updates to `main` triggers publication. The `.nojekyll` marker serves the static HTML, CSS, JavaScript modules, and SVG assets without Jekyll processing.
 
-The hosted entry point is `index.html`; `vision.html` serves the interactive chapter, `moe.html` is the placeholder, and `standalone.html` remains the self-contained offline vision chapter. Run `node build.mjs` after vision source edits to rebuild the offline chapter from `vision.html`. The homepage is not bundled into the offline chapter. Check the repository’s Actions tab for deployment status.
+The hosted entry point is `index.html`; `vision.html` serves the interactive chapter, `moe.html` serves the MoE chapter, and `standalone.html` remains the self-contained offline vision chapter. Run `node build.mjs` after vision source edits to rebuild the offline chapter from `vision.html`. The homepage is not bundled into the offline chapter. Check the repository’s Actions tab for deployment status.
 
 ## Next step toward a full research explainer
 
