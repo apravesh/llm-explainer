@@ -1,3 +1,5 @@
+import {embeddingOverviewMarkup} from './embedding-view.mjs';
+import {mlpLanesMarkup} from './multiplication.mjs';
 import {outputReadoutMarkup,nextStageMarkup} from './readout.mjs';
 import { multiHeadMarkup, multiHeadView } from './multi-head.mjs';
 import { attentionFlowMarkup, attentionScoreDetail } from './attention-flow.mjs';
@@ -81,11 +83,10 @@ function multiplicationView({input,weights,output,scalar,dimension,inputName='x'
  </div>`;
 }
 function numberVector(label,values){return `<div class="expanded-vector"><span>${label}</span><div>${values.map((v,i)=>`<span style="background:${tint(v,2)}" title="Dimension ${i}: ${nf(v,6)}">${nf(v,2)}</span>`).join('')}</div>`;}
-function tokenOptions(s,patches,selected){return `${s.model==='vit'?`<option value="0" ${selected===0?'selected':''}>[CLS]</option>`:''}${patches.map((p,j)=>{const k=j+(s.model==='vit'?1:0);return `<option value="${k}" ${selected===k?'selected':''}>p${j} · (${p.row}, ${p.col})</option>`;}).join('')}`;}
 
 export function expansionMarkup(s,patches,result,imageURL){
  const step=s.expanded,selected=Math.max(0,s.selected),p=patches[selected],token=s.model==='vit'?s.selected+1:selected,l=result.layers[s.layer],head=l.heads[s.head],isPix=s.model==='pixtral';
- const title=step===1?'Rearrange pixels. Keep every value.':step===2?'Pixels × weights → a hidden state.':step===0?'Zoom all the way into the pixels.':step===3?'One image. Multiple attention heads.':step===4?'Inside the feed-forward network.':step===5?'The final output is a matrix of vectors.':'From image representations to a task.';
+ const title=step===1?'Rearrange pixels. Keep every value.':step===2?'One row per token. All embeddings in view.':step===0?'Zoom all the way into the pixels.':step===3?'One image. Multiple attention heads.':step===4?'Inside the feed-forward network.':step===5?'The final output is a matrix of vectors.':'From image representations to a task.';
  let body='',sub='',controls=`<div class="inspected-token"><span>${step===3?'Query token':'Inspecting'}</span><strong>${s.selected<0?'[CLS]':`p${String(s.selected).padStart(2,'0')} · (${p.row}, ${p.col})`}</strong><small>select from the patch sequence</small></div>`;
  if(step<=2){
   if(s.selected<0){sub='[CLS] is a separate trainable vector, not a projected image patch.';body=`<div class="cls-explanation">${numberVector('Raw [CLS]',result.cls)}${numberVector('+ position',result.positions[0])}${numberVector('Input [CLS]',result.input[0])}<p>Choose a patch from the sequence to inspect pixel projection.</p></div>`;}
@@ -100,7 +101,6 @@ export function expansionMarkup(s,patches,result,imageURL){
   }
  } else if(step===3){
   s.dimension=Math.min(s.attentionInspect==='merge'?DIM-1:HEAD_DIM-1,s.dimension);s.scalar=Math.min(DIM-1,s.scalar);
-  controls+=`<label class="expand-patch-select">Key <select id="expand-key" data-inspect="key">${tokenOptions(s,patches,s.key)}</select></label><label class="expand-patch-select">Head <select id="expand-head" data-inspect="head">${[0,1,2].map(i=>`<option value="${i}" ${s.head===i?'selected':''}>${i+1}</option>`).join('')}</select></label>`;
   sub=`Block ${s.layer+1} · ${l.heads.length} parallel heads. Each head has narrower Q/K/V vectors and its own attention weights. They all see the same tokens. Select a head to inspect it, then follow the outputs back into the residual stream.`;
   body=multiHeadMarkup(s,patches,l);
   if(s.headDetailOpen||s.attentionInspect&&s.attentionInspect!=='merge'){
@@ -123,6 +123,7 @@ export function expansionMarkup(s,patches,result,imageURL){
   const op=s.ffn||'up',w=l.weights[op],input=op==='down'?l.expanded[token]:l.ffnInput[token],output=op==='down'?l.mlpDelta[token]:op==='gate'?l.gate[token]:l.preActivation[token];s.scalar=Math.min(input.length-1,s.scalar);s.dimension=Math.min(output.length-1,s.dimension);
   sub=`Block ${s.layer+1}. Each token is transformed independently; no patch-to-patch mixing happens here.`;
   body=tabs('ffn',[['up','1 · Expand 24 → 48'],...(isPix?[['gate','2 · Gate 24 → 48']]:[]),['down',`${isPix?'3':'2'} · Contract 48 → 24`]],op)+multiplicationView({input,weights:w,output,scalar:s.scalar,dimension:s.dimension,inputName:op==='down'?'a':'h̄',matrixName:op==='down'?'W₂':op==='gate'?'W₃':'W₁',outputName:op==='down'?'Δh':'z'})+`<div class="ffn-expanded-math"><div><span class="expand-label">NONLINEARITY</span><p>${isPix?'SiLU(W₁h̄) ⊙ W₃h̄':'GELU(W₁h̄)'} produces the 48-dimensional vector passed to W₂.</p>${numberVector('activated',l.expanded[token])}</div><div><span class="expand-label">RESIDUAL CONNECTION</span><code>h′[0] = h[0] + Δh[0]</code><code>${nf(l.afterAttention[token][0],5)} + ${nf(l.mlpDelta[token][0],5)} = <strong>${nf(l.output[token][0],5)}</strong></code></div></div>`;
+  body=mlpLanesMarkup(s,patches,result)+`<details class="mlp-static-details"><summary>Static numeric inspector · weights, activations & residual</summary>${body}</details>`;
  } else if(step===5){
   sub=`After all ${result.layers.length} encoder blocks, each token has ${DIM} features. The encoder itself has not selected a class or generated a word.`;
   body=outputReadoutMarkup(s,patches,result);
@@ -133,6 +134,11 @@ export function expansionMarkup(s,patches,result,imageURL){
    const op=s.adapter||'first',idx=op==='first'?0:1,w=result.adapterWeights[idx],input=idx?result.adapterHidden[token]:result.final[token],output=idx?result.projected[token]:result.adapterPre[token];s.scalar=Math.min(input.length-1,s.scalar);s.dimension=Math.min(31,s.dimension);
    body+=`<section class="ro-projector-detail" id="projector-detail"><h4>Actual teaching projector · p${selected}</h4>${tabs('adapter',[['first','1 · Linear 24 → 32'],['second','2 · GELU → Linear 32 → 32']],op)}${multiplicationView({input,weights:w,output,scalar:s.scalar,dimension:s.dimension,inputName:idx?'GELU(z)':'h',matrixName:idx?'W₂':'W₁',outputName:idx?'LLM':'z'})}</section>`;
   }else body+='<div id="projector-detail" hidden></div>';
+ }
+
+ if(step===2){
+  sub=`${result.input.length} token vectors × ${DIM} features. Select any row to follow its input preparation; the full matrix stays visible.`;
+  body=embeddingOverviewMarkup(s,patches,result)+`<details id="embedding-arithmetic" class="eb-arithmetic" ${s.embeddingDetail?'open':''}><summary>${s.selected<0?'Inspect the learned CLS vector and position addition':'Inspect pixel projection and input preparation'} <span>exact values & weights</span></summary>${body}</details>`;
  }
 
  return `<div class="expansion-topline"><span class="expansion-breadcrumb">ARCHITECTURE / ${names[step].toUpperCase()}</span><button data-collapse class="collapse-expansion" aria-label="Collapse expanded section">− Collapse</button></div><div class="expansion-workspace">${patchRailMarkup(s,patches,imageURL)}<div class="expansion-inspection"><div class="expansion-intro"><h3>${title}</h3><p>${sub}</p></div><div class="expansion-controls">${controls}<span class="weights-disclosure">${step<=1?'Live pixels · no learned parameters':step===6?'Vectors computed · decoder/classifier schematic':'Live values · untrained weights'}</span></div>${body}<div class="expansion-nav"><button data-expand-step="${step-1}" ${step===0?'disabled':''}>← ${names[step-1]||'Previous'}</button><span>Click another stage to open it in place</span><button data-expand-step="${step+1}" ${step===names.length-1?'disabled':''}>${names[step+1]||'Next'} →</button></div></div></div>`;

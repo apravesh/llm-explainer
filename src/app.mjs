@@ -1,15 +1,18 @@
-import {compactNextMarkup} from './readout.mjs';
+import {createPatchTour} from './patch-tour.mjs';
+import {createMultiplicationOverlay,mlpLanesMarkup,mountPatchConnections} from './multiplication.mjs';
+import {compactNextMarkup,outputMatrixMarkup,outputColor} from './readout.mjs';
 import { mountMultiHead } from './multi-head.mjs';
 import { mountAttentionFlow } from './attention-flow.mjs';
 import { createArchitectureMotion } from './motion.mjs';
 import { expansionMarkup, nextRailPatch, railScrollOffset, STAGE_NAMES } from './expansion.mjs';
 import { DIM, HEADS, DEPTH, HEAD_DIM, patchify, imageShape, runEncoder, dot, rotatePair } from './engine.mjs';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const state={clsStep:0,decoderStep:0,projectorDetail:false,headDetailOpen:false,compareCausal:false,attentionInspect:null,expanded:null,scalar:408,dimension:0,qkv:'q',ffn:'up',adapter:'first',model:'vit',patch:16,layer:0,head:0,selected:21,key:22,step:3,sample:'bird',ropeMode:'2d',width:96,height:96,cols:6,rows:6};
+const state={embeddingDetail:false,clsStep:0,decoderStep:0,projectorDetail:false,headDetailOpen:false,compareCausal:false,attentionInspect:null,expanded:null,scalar:408,dimension:0,qkv:'q',ffn:'up',adapter:'first',model:'vit',patch:16,layer:0,head:0,selected:21,key:22,step:3,sample:'bird',ropeMode:'2d',width:96,height:96,cols:6,rows:6};
 let image, patches=[], result, imageURL='', uploadURL=null, loadTicket=0;
+let patchTour=null;
 const surface=document.createElement('canvas'),ctx=surface.getContext('2d',{willReadFrequently:true});
 const fmt=(x,n=3)=>Number(x).toFixed(n); const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function diverging(v){const t=Math.min(Math.abs(v)/2,1),a=v>=0?[107,143,207]:[204,143,115];return `rgb(${a.map(x=>Math.round(245+(x-245)*t)).join(',')})`;}
+function diverging(v){return outputColor(v);}
 function heat(v,max){const t=Math.pow(Math.min(v/(max||1),1),.7);return `rgb(${[54,103,228].map((x,i)=>Math.round([245,248,254][i]+(x-[245,248,254][i])*t)).join(',')})`;}
 function tokenIndex(){return state.model==='vit'?state.selected+1:Math.max(0,state.selected);}
 function tokenLabel(i){if(state.model==='vit'){if(i===0)return '[CLS]';i--;}const p=patches[i];return p?`(${p.row}, ${p.col})`:'—';}
@@ -32,7 +35,7 @@ function recompute(){
  result=runEncoder(patches,state.cols,state.model);buildImageGrid();render();$('#error').hidden=true;
 }
 function buildImageGrid(){const grid=$('#image-grid');grid.style.backgroundImage=`url('${imageURL}')`;grid.style.gridTemplateColumns=`repeat(${state.cols},1fr)`;grid.style.gridTemplateRows=`repeat(${state.rows},1fr)`;grid.style.aspectRatio=`${state.width}/${state.height}`;grid.style.maxWidth=`${Math.min(184,184*state.width/state.height)}px`;grid.innerHTML=patches.map((p,i)=>`<button class="patch-hit" data-patch="${i}" aria-label="Select patch row ${p.row}, column ${p.col}" aria-pressed="${state.selected===i}" title="Patch ${i} · row ${p.row}, column ${p.col}"></button>`).join('');}
-function render(){if(!result)return;
+function render(){if(!result)return;patchTour?.checkData();$('#tour').disabled=false;
  $$('.model-switch button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.model===state.model));$$('[data-head]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.head===state.head));
  $('#layer-number').textContent=state.layer+1;$('#block-caption').textContent=`TRANSFORMER BLOCK ${state.layer+1}`;$('#image-shape').textContent=`${state.width} × ${state.height} RGB`;$('#image-fit').textContent=state.model==='vit'?'Square crop':'Aspect-preserving';
  $('#selected-coordinate').textContent=state.selected<0?'[CLS]':`(${currentPatch().row}, ${currentPatch().col})`;
@@ -44,22 +47,28 @@ function render(){if(!result)return;
  $('#output-destination').innerHTML=`<span>${state.model==='vit'?'patches + [CLS]':'patches only'}</span><small>after all ${DEPTH} blocks</small><small>vectors, not text</small>`;
  $('#next-path-preview').innerHTML=compactNextMarkup(state.model);
  renderSequence();drawEmbeddings();drawAttention();renderVectors();renderDetail();
- $$('.stage').forEach(s=>s.classList.toggle('active',+s.dataset.stage===state.step));$('#step-count').textContent=`${state.step+1} / ${STAGE_NAMES.length}`;$('#step-back').disabled=state.step===0;$('#step-next').disabled=state.step===STAGE_NAMES.length-1;renderExpansion();
+ $$('.stage').forEach(s=>s.classList.toggle('active',+s.dataset.stage===state.step));$('#step-count').textContent=`${state.step+1} / ${STAGE_NAMES.length}`;$('#step-back').disabled=state.step===0;$('#step-next').disabled=state.step===STAGE_NAMES.length-1;renderExpansion();patchConnections.schedule();
 }
-function renderSequence(){let indices=new Set([0,1,2,Math.max(0,state.selected-1),Math.max(0,state.selected),Math.min(patches.length-1,state.selected+1),patches.length-2,patches.length-1]);let sorted=[...indices].filter(x=>x>=0).sort((a,b)=>a-b);let prev=-1;
- $('#patch-sequence').innerHTML=sorted.map(i=>{let ell=i>prev+1?'<div class="sequence-ellipsis" aria-hidden="true">⋮</div>':'';prev=i;return ell+`<button class="sequence-item" data-patch="${i}" aria-label="Select patch ${i}, row ${patches[i].row}, column ${patches[i].col}" aria-pressed="${state.selected===i}"><span class="sequence-thumb" style="background-image:url('${imageURL}');background-size:${state.cols*100}% ${state.rows*100}%;background-position:${state.cols===1?0:patches[i].col/(state.cols-1)*100}% ${state.rows===1?0:patches[i].row/(state.rows-1)*100}%"></span><span>p${String(i).padStart(2,'0')}</span></button>`;}).join('');}
+function renderSequence(){
+ const sequence=$('#patch-sequence'),top=sequence.scrollTop,oldSelected=sequence.dataset.selected;
+ sequence.innerHTML=patches.map((p,i)=>`<button class="sequence-item" data-patch="${i}" aria-label="Select patch ${i}, row ${p.row}, column ${p.col}" aria-pressed="${i===state.selected}" tabindex="${i===Math.max(0,state.selected)?0:-1}"><span class="sequence-thumb" style="background-image:url('${imageURL}');background-size:${state.cols*100}% ${state.rows*100}%;background-position:${state.cols===1?0:p.col/(state.cols-1)*100}% ${state.rows===1?0:p.row/(state.rows-1)*100}%"></span><span>p${String(i).padStart(2,'0')}</span></button>`).join('');
+ sequence.dataset.selected=state.selected;sequence.scrollTop=top;if(oldSelected!==String(state.selected))revealSelectedItem(sequence);
+}
 function setupCanvas(id,w,h){const c=$(id),r=window.devicePixelRatio||1;c.width=Math.round(w*r);c.height=Math.round(h*r);const g=c.getContext('2d');g.scale(r,r);return g;}
 function drawEmbeddings(){const w=100,h=192,g=setupCanvas('#embedding-matrix',w,h),rows=result.input,n=rows.length,cellH=h/n,cellW=w/DIM;
  rows.forEach((v,i)=>v.forEach((x,j)=>{g.fillStyle=diverging(x);g.fillRect(j*cellW,i*cellH,Math.max(.5,cellW-.4),Math.max(.5,cellH-.4));}));g.strokeStyle='#3667e4';g.lineWidth=1.2;g.strokeRect(.7,tokenIndex()*cellH+.5,w-1.4,Math.max(1,cellH-1));
- $('#embedding-matrix').setAttribute('aria-label',`${n} input token vectors, each with ${DIM} dimensions. Selected ${tokenLabel(tokenIndex())}. Use up and down arrows to select a token.`);
+ $('#embedding-matrix').setAttribute('aria-label',`${n} input token vectors, each with ${DIM} dimensions. Selected ${tokenLabel(tokenIndex())}. Use up and down arrows to select a token; Enter opens its computation.`);
 }
 function drawAttention(){const size=164,g=setupCanvas('#attention-matrix',size,size),head=currentHead(),n=tokenCount(),cw=size/n,max=Math.max(...head.attention.flat());
  head.attention.forEach((row,i)=>row.forEach((v,j)=>{g.fillStyle=heat(v,max);g.fillRect(j*cw,i*cw,Math.max(.3,cw-.45),Math.max(.3,cw-.45));}));g.strokeStyle='#204ac7';g.lineWidth=1;g.strokeRect(.5,tokenIndex()*cw+.3,size-1,Math.max(1,cw-.6));g.strokeStyle='#c7765b';g.strokeRect(state.key*cw+.4,tokenIndex()*cw+.4,Math.max(1,cw-.8),Math.max(1,cw-.8));
  $('#attention-matrix').setAttribute('aria-label',`Attention block ${state.layer+1}, head ${state.head+1}. Query ${tokenLabel(tokenIndex())}, key ${tokenLabel(state.key)}, weight ${fmt(head.attention[tokenIndex()][state.key]*100,2)} percent. Arrow keys change the key and query.`);
 }
 function renderVectors(){const l=currentLayer(),i=tokenIndex(),h=currentHead();['q','k','v'].forEach((name)=>{const x=name==='v'?h.values[i]:h[name][i];$(`#${name}-swatch`).innerHTML=x.slice(0,4).map(v=>`<i style="background:${diverging(v)}"></i>`).join('');});
- $('#ffn-viz').innerHTML=stack(l.afterAttention[i])+stack(l.expanded[i],true)+stack(l.output[i]);
- const near=[Math.max(0,i-1),i,Math.min(result.final.length-1,i+1)];$('#output-vectors').innerHTML=near.map((j,z)=>`<div style="opacity:${z===1?1:.4}">${stack(result.final[j])}</div>`).join('');
+ const lanes=$('#ffn-viz .mlp-lanes-scroll'),oldTop=lanes?.scrollTop||0,oldSelected=lanes?.dataset.selected;
+ $('#ffn-viz').innerHTML=mlpLanesMarkup(state,patches,result,{compact:true});
+ const nextLanes=$('#ffn-viz .mlp-lanes-scroll');nextLanes.scrollTop=oldTop;if(oldSelected!==String(state.selected))revealSelectedItem(nextLanes);
+ $('#output-vectors').innerHTML=outputMatrixMarkup(state,patches,result,{compact:true});
+ $('#output-vectors').setAttribute('aria-label',`${result.final.length} final token vectors, each with ${DIM} features. Expand output matrix.`);
 }
 const details=[
  ['THE INPUT','Start with pixels, not words.'],['PATCHIFICATION','From a grid to a sequence.'],['PATCH EMBEDDING','One hidden state per patch.'],['SELF-ATTENTION','Every patch, in conversation.'],['FEED-FORWARD NETWORK','Mix features, not patches.'],['THE READOUT','Representations, not sentences.'],['WHAT HAPPENS NEXT','A classifier or a text decoder?']
@@ -91,16 +100,23 @@ function renderTensorInspector(){
  $('#tensor-content').innerHTML=`<div class="tensor-values">${state.model==='pixtral'?values('Q before RoPE',h.rawQ[i])+values('K before RoPE',h.rawK[j]):''}${values(state.model==='pixtral'?'Q after RoPE':'Q at query',q)}${values(state.model==='pixtral'?'K after RoPE':'K at key',k)}${values('Q ⊙ K',q.map((v,d)=>v*k[d]))}${values('V at key',h.values[j])}</div><div class="tensor-calculation"><span>Σ(Q ⊙ K) = <strong>${fmt(dot(q,k),5)}</strong></span><span>÷ √8 = <strong>${fmt(h.scores[i][j],5)}</strong></span><span>softmax across ${tokenCount()} keys → <strong>${fmt(h.attention[i][j]*100,3)}%</strong></span></div><p>Q belongs to query ${tokenLabel(i)}; K and V belong to key ${tokenLabel(j)}. This key contributes its V vector multiplied by the displayed softmax weight. Q and K are not passed to the next layer.</p>`;
 }
 
-function selectPatch(index,announce=true){state.selected=Math.max(state.model==='vit'?-1:0,Math.min(patches.length-1,index));state.key=tokenIndex();render();if(announce)$('#status').textContent=`Selected ${tokenLabel(tokenIndex())}. Attention block ${state.layer+1}, head ${state.head+1}.`;}
+function selectPatch(index,announce=true){state.selected=Math.max(state.model==='vit'?-1:0,Math.min(patches.length-1,index));state.key=tokenIndex();render();if(announce)$('#status').textContent=state.expanded===2?`Input embedding for ${tokenLabel(tokenIndex())}: ${DIM} features. All ${result.input.length} token rows remain in the matrix.`:state.expanded===5?`Final output for ${tokenLabel(tokenIndex())}: ${DIM} features. All ${result.final.length} token rows remain in the matrix.`:`Selected ${tokenLabel(tokenIndex())}. Attention block ${state.layer+1}, head ${state.head+1}.`;}
 function setStep(step,scroll=false){state.step=Math.max(0,Math.min(STAGE_NAMES.length-1,step));if(state.expanded!==null)state.expanded=state.step;if(state.step<2&&state.selected<0)state.selected=0;render();if(scroll)(state.expanded===null?$('#detail'):$('.stage.is-expanded')).scrollIntoView({behavior:'smooth',block:'nearest'});}
 function setModel(model){state.model=model;recompute();$('#status').textContent=`${model==='vit'?'Classic ViT':'Pixtral'} architecture. ${patches.length} patches, ${state.rows} rows by ${state.cols} columns.`;}
 function handleError(error){$('#error').textContent=error.message;$('#error').hidden=false;}
 let attentionController=null,multiHeadController=null;
 let railViewport={top:0,left:0,selected:null,signature:null};
+let outputViewport={top:0,selected:null,signature:null};
+let embeddingViewport={top:0,selected:null,signature:null};
 // A stage expands in the architecture itself; neighboring stages stay navigable.
 function renderExpansion(){
  const previousMultiHead=multiHeadController?.snapshot;multiHeadController?.dispose();multiHeadController=null;
  const previousAttention=attentionController?.snapshot;attentionController?.dispose();attentionController=null;
+ const oldMlp=$('.stage-expansion .mlp-lanes-scroll'),mlpScroll=oldMlp?.scrollTop||0,mlpSelection=oldMlp?.dataset.selected;
+ const oldEmbedding=$('.eb-matrix-scroll');
+ if(oldEmbedding)embeddingViewport={top:oldEmbedding.scrollTop,selected:oldEmbedding.dataset.selected,signature:oldEmbedding.dataset.signature};
+ const oldMatrix=$('.ro-matrix-scroll');
+ if(oldMatrix)outputViewport={top:oldMatrix.scrollTop,selected:oldMatrix.dataset.selected,signature:oldMatrix.dataset.signature};
  const oldRail=$('.token-rail-list');
  if(oldRail)railViewport={top:oldRail.scrollTop,left:oldRail.scrollLeft,selected:oldRail.dataset.selected,signature:oldRail.dataset.signature};
  const expanded=state.expanded!==null;
@@ -138,22 +154,35 @@ function renderExpansion(){
    onInspect(kind){state.attentionInspect=state.attentionInspect===kind?null:kind;if(['q','k','v'].includes(kind))state.qkv=kind;renderKeepingFocus(`[data-attn-inspect="${kind}"]`);},
    onCompare(value){state.compareCausal=value;renderKeepingFocus('#compare-causal');}
  });
+ const nextMlp=$('.stage-expansion .mlp-lanes-scroll');if(nextMlp){nextMlp.scrollTop=mlpScroll;if(mlpSelection!==String(state.selected))revealSelectedItem(nextMlp);}
+ const matrix=$('.ro-matrix-scroll');
+ if(matrix){
+   const sameGrid=matrix.dataset.signature===outputViewport.signature;
+   matrix.scrollTop=sameGrid?outputViewport.top:0;
+   if(!sameGrid||matrix.dataset.selected!==outputViewport.selected)revealSelectedItem(matrix);
+ }
+ const embeddingMatrix=$('.eb-matrix-scroll');
+ if(embeddingMatrix){
+   const sameGrid=embeddingMatrix.dataset.signature===embeddingViewport.signature;
+   embeddingMatrix.scrollTop=sameGrid?embeddingViewport.top:0;
+   if(!sameGrid||embeddingMatrix.dataset.selected!==embeddingViewport.selected)revealSelectedItem(embeddingMatrix);
+ }
  const rail=$('.token-rail-list');
  if(rail){
    const sameGrid=rail.dataset.signature===railViewport.signature;
    rail.scrollTop=sameGrid?railViewport.top:0;rail.scrollLeft=sameGrid?railViewport.left:0;
    if(!sameGrid||rail.dataset.selected!==railViewport.selected){
-     revealRailSelection(rail);
+     revealSelectedItem(rail);
    }
  }
 }
-function revealRailSelection(rail){
- const selected=rail?.querySelector('[aria-pressed="true"]');if(!selected)return;
+function revealSelectedItem(rail){
+ const pressed=rail?.querySelector('[aria-pressed="true"]'),selected=pressed?.closest('.mlp-lane')||pressed;if(!selected)return;
  const r=rail.getBoundingClientRect(),p=selected.getBoundingClientRect();
  rail.scrollTop=railScrollOffset(rail.scrollTop,rail.clientHeight,p.top-r.top+rail.scrollTop,p.bottom-r.top+rail.scrollTop);
  rail.scrollLeft=railScrollOffset(rail.scrollLeft,rail.clientWidth,p.left-r.left+rail.scrollLeft,p.right-r.left+rail.scrollLeft);
 }
-window.addEventListener('resize',()=>requestAnimationFrame(()=>revealRailSelection($('.token-rail-list'))));
+window.addEventListener('resize',()=>requestAnimationFrame(()=>{revealSelectedItem($('.token-rail-list'));revealSelectedItem($('.ro-matrix-scroll'));revealSelectedItem($('.eb-matrix-scroll'));}));
 const architectureMotion=createArchitectureMotion($('#architecture'),()=>state.expanded);
 function openExpansion(step){
  if(!result||step<0||step>=STAGE_NAMES.length)return;
@@ -171,9 +200,18 @@ function closeExpansion(){
 function renderKeepingFocus(key){render();if(key){const el=$('.stage.is-expanded '+key);if(el)el.focus({preventScroll:true});}}
 $('#architecture').addEventListener('click',e=>{
  const target=e.target.closest('button');if(!target)return;
- if(target.hasAttribute('data-next-model')){state.projectorDetail=false;state.decoderStep=0;setModel(target.dataset.nextModel);$('#stage-trigger-6').focus({preventScroll:true});$('#stage-expansion-6').scrollIntoView({behavior:'instant',block:'start'});return;}
+ if(target.hasAttribute('data-multiply')){multiplicationOverlay.open(target.dataset.multiply,target);return;}
+ if(target.hasAttribute('data-mlp-patch')){selectPatch(+target.dataset.mlpPatch);const button=$(`.stage.is-expanded .stage-expansion [data-mlp-patch="${state.selected}"]`)||$(`#ffn-viz [data-mlp-patch="${state.selected}"]`);button?.focus({preventScroll:true});return;}
+ if(target.hasAttribute('data-next-model')){
+   if(target.dataset.nextModel===state.model)return;
+   state.projectorDetail=false;state.decoderStep=0;setModel(target.dataset.nextModel);
+   $(`.ro-path[data-next-model="${state.model}"]`).focus({preventScroll:true});
+   $('#stage-expansion-6').scrollIntoView({behavior:'instant',block:'start'});return;
+ }
  if(target.hasAttribute('data-decoder-step')){state.decoderStep=+target.dataset.decoderStep;renderKeepingFocus(`[data-decoder-step="${state.decoderStep}"]`);return;}
  if(target.hasAttribute('data-projector-detail')){state.projectorDetail=!state.projectorDetail;renderKeepingFocus('[data-projector-detail]');return;}
+ if(target.hasAttribute('data-embedding-patch')){selectPatch(+target.dataset.embeddingPatch);$('.eb-matrix-row[aria-pressed="true"]').focus({preventScroll:true});return;}
+ if(target.hasAttribute('data-output-patch')){selectPatch(+target.dataset.outputPatch);$('.ro-matrix-row[aria-pressed="true"]').focus({preventScroll:true});return;}
  if(target.hasAttribute('data-readout-patch')){selectPatch(+target.dataset.readoutPatch);renderKeepingFocus(`[data-readout-patch="${state.selected}"]`);return;}
  if(target.hasAttribute('data-head-detail-close')){state.headDetailOpen=false;state.attentionInspect=null;renderKeepingFocus(`.mh-head-heading[data-mh-open="${state.head}"]`);return;}
  if(target.hasAttribute('data-attn-close')){const kind=state.attentionInspect;state.attentionInspect=null;renderKeepingFocus(kind==='merge'?'[data-mh-project]':`[data-attn-inspect="${kind}"]`);return;}
@@ -193,9 +231,7 @@ $('#architecture').addEventListener('click',e=>{
 function updateInspectionControl(e){
  const el=e.target,kind=el.dataset.inspect;if(!kind||el.value==='')return;const n=Number(el.value);if(!Number.isFinite(n))return;
  if(kind==='patch'){state.selected=n;state.key=tokenIndex();}
- if(kind==='key')state.key=n;
  if(kind==='cls-step')state.clsStep=Math.max(0,Math.min(result.layers.length+2,n));
- if(kind==='head'){state.head=n;state.headDetailOpen=true;state.attentionInspect=null;}
  if(kind==='scalar-index')state.scalar=Math.max(0,Math.min(+el.max,Math.round(n)));
  if(kind==='pixel-row'||kind==='pixel-col'){
    const pixel=Math.floor(state.scalar/3),row=Math.floor(pixel/state.patch),col=pixel%state.patch,v=Math.max(0,Math.min(state.patch-1,Math.round(n)));
@@ -203,34 +239,42 @@ function updateInspectionControl(e){
  }
  renderKeepingFocus('#'+el.id);
 }
+$('#architecture').addEventListener('toggle',e=>{if(e.target.id==='embedding-arithmetic'&&e.target.isConnected)state.embeddingDetail=e.target.open;},true);
 $('#architecture').addEventListener('change',e=>{if(e.target.tagName==='SELECT')updateInspectionControl(e);});
 $('#architecture').addEventListener('input',e=>{if(e.target.matches('input[data-inspect]'))updateInspectionControl(e);});
 $('#architecture').addEventListener('keydown',e=>{
  if(e.key==='Escape'&&state.expanded!==null){e.preventDefault();closeExpansion();return;}
+ const mlpPatch=e.target.closest('[data-mlp-patch]');
+ if(mlpPatch){const next=nextRailPatch(+mlpPatch.dataset.mlpPatch,e.key,patches.length,state.model==='vit');if(next!==null){e.preventDefault();selectPatch(next);const button=$(`.stage.is-expanded .stage-expansion [data-mlp-patch="${next}"]`)||$(`#ffn-viz [data-mlp-patch="${next}"]`);button?.focus({preventScroll:true});}return;}
+ const embeddingRow=e.target.closest('[data-embedding-patch]');
+ if(embeddingRow){const next=nextRailPatch(+embeddingRow.dataset.embeddingPatch,e.key,patches.length,state.model==='vit');if(next!==null){e.preventDefault();selectPatch(next);$('.eb-matrix-row[aria-pressed="true"]').focus({preventScroll:true});}return;}
+ const outputRow=e.target.closest('[data-output-patch]');
+ if(outputRow){const next=nextRailPatch(+outputRow.dataset.outputPatch,e.key,patches.length,state.model==='vit');if(next!==null){e.preventDefault();selectPatch(next);$('.ro-matrix-row[aria-pressed="true"]').focus({preventScroll:true});}return;}
  const railItem=e.target.closest('[data-rail-patch]');
  if(railItem){const next=nextRailPatch(+railItem.dataset.railPatch,e.key,patches.length,state.model==='vit'&&state.expanded>=2);if(next!==null){e.preventDefault();selectPatch(next);$('.token-rail-item[aria-pressed="true"]').focus({preventScroll:true});}return;}
  const pixel=e.target.closest('[data-pixel]');if(pixel){const delta={ArrowRight:1,ArrowLeft:-1,ArrowUp:-state.patch,ArrowDown:state.patch}[e.key];if(delta!==undefined){e.preventDefault();const next=Math.min(state.patch**2-1,Math.max(0,+pixel.dataset.pixel+delta));state.scalar=next*3+state.scalar%3;renderKeepingFocus(`[data-pixel="${next}"]`);}}
 });
-[['#ffn-viz',4],['#output-vectors',5]].forEach(([id,step])=>{const el=$(id);el.setAttribute('role','button');el.tabIndex=0;el.setAttribute('aria-label',`Expand ${step===4?'MLP':'output'} computation`);el.addEventListener('click',()=>openExpansion(step));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openExpansion(step);}});});
+[['#output-vectors',5]].forEach(([id,step])=>{const el=$(id);el.setAttribute('role','button');el.tabIndex=0;el.setAttribute('aria-label',`Expand ${step===4?'MLP':'output'} computation`);el.addEventListener('click',()=>openExpansion(step));el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openExpansion(step);}});});
 $$('[data-model]').forEach(b=>b.addEventListener('click',()=>setModel(b.dataset.model)));
 $('#sample').addEventListener('change',()=>{if($('#sample').value==='custom')return;state.sample=$('#sample').value;loadImage(`assets/${state.sample}.svg`).catch(handleError);});
 $('#patch-size').addEventListener('change',e=>{state.patch=+e.target.value;recompute();});
 $('#layer').addEventListener('input',e=>{state.layer=+e.target.value;render();});
 $$('[data-head]').forEach(b=>b.addEventListener('click',()=>{state.head=+b.dataset.head;render();}));
-$('#image-grid').addEventListener('click',e=>{const b=e.target.closest('[data-patch]');if(b){selectPatch(+b.dataset.patch);if(state.expanded===null)openExpansion(1);}});
+$('#image-grid').addEventListener('click',e=>{const b=e.target.closest('[data-patch]');if(b){selectPatch(+b.dataset.patch);}});
 $('#image-grid').addEventListener('keydown',e=>{const b=e.target.closest('[data-patch]');if(!b)return;const delta={ArrowRight:1,ArrowLeft:-1,ArrowUp:-state.cols,ArrowDown:state.cols}[e.key];if(delta!==undefined){e.preventDefault();const i=Math.max(0,Math.min(patches.length-1,+b.dataset.patch+delta));selectPatch(i);$(`#image-grid [data-patch="${i}"]`).focus();}});
-$('#patch-sequence').addEventListener('click',e=>{const b=e.target.closest('[data-patch]');if(b){selectPatch(+b.dataset.patch);if(state.expanded===null)openExpansion(1);}});
+$('#patch-sequence').addEventListener('click',e=>{const b=e.target.closest('[data-patch]');if(b){selectPatch(+b.dataset.patch);$(`#patch-sequence [data-patch="${state.selected}"]`).focus({preventScroll:true});}});
+$('#patch-sequence').addEventListener('keydown',e=>{const b=e.target.closest('[data-patch]');if(!b)return;const next=nextRailPatch(+b.dataset.patch,e.key,patches.length,false);if(next!==null){e.preventDefault();selectPatch(next);$(`#patch-sequence [data-patch="${next}"]`).focus({preventScroll:true});}});
 $$('[data-step]').forEach(b=>b.addEventListener('click',()=>state.expanded===+b.dataset.step?closeExpansion():openExpansion(+b.dataset.step)));
 $('#detail-visual').addEventListener('click',e=>{if(e.target.closest('[data-detail-next]')){openExpansion(6);return;}const b=e.target.closest('[data-key]');if(b){state.key=+b.dataset.key;drawAttention();renderDetail();$('#detail-visual [data-key="'+state.key+'"]').focus({preventScroll:true});}});
 $('#step-back').addEventListener('click',()=>setStep(state.step-1));$('#step-next').addEventListener('click',()=>setStep(state.step+1));
-$('#tour').addEventListener('click',()=>{$('#explorer').scrollIntoView({behavior:'instant',block:'start'});openExpansion(0);$('#detail-note').textContent+=' Use the right arrow to advance through the seven stages.';});
+
 $('#position-button').addEventListener('click',()=>openExpansion(state.model==='pixtral'?3:2));
 $('#try-pixtral').addEventListener('click',()=>{setModel('pixtral');$('#explorer').scrollIntoView({behavior:'instant',block:'start'});openExpansion(6);});
 $('#attention-matrix').addEventListener('click',e=>{const rect=e.currentTarget.getBoundingClientRect(),n=tokenCount(),q=Math.min(n-1,Math.floor((e.clientY-rect.top)/rect.height*n));state.selected=q-(state.model==='vit'?1:0);state.key=Math.min(n-1,Math.floor((e.clientX-rect.left)/rect.width*n));openExpansion(3);});
 $('#attention-matrix').addEventListener('mousemove',e=>{const r=e.currentTarget.getBoundingClientRect(),n=tokenCount(),q=Math.min(n-1,Math.max(0,Math.floor((e.clientY-r.top)/r.height*n))),k=Math.min(n-1,Math.max(0,Math.floor((e.clientX-r.left)/r.width*n)));e.currentTarget.title=`Query ${tokenLabel(q)} → Key ${tokenLabel(k)}: ${fmt(currentHead().attention[q][k]*100,3)}%`;});
 $('#attention-matrix').addEventListener('keydown',e=>{if(!e.key.startsWith('Arrow'))return;e.preventDefault();if(e.key==='ArrowRight')state.key=Math.min(tokenCount()-1,state.key+1);if(e.key==='ArrowLeft')state.key=Math.max(0,state.key-1);if(e.key==='ArrowUp')state.selected=Math.max(state.model==='vit'?-1:0,state.selected-1);if(e.key==='ArrowDown')state.selected=Math.min(patches.length-1,state.selected+1);state.step=3;render();});
-$('#embedding-matrix').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();selectPatch(Math.min(tokenCount()-1,Math.floor((e.clientY-r.top)/r.height*tokenCount()))-(state.model==='vit'?1:0));openExpansion(2);});
-$('#embedding-matrix').addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();selectPatch(state.selected+(e.key==='ArrowUp'?-1:1));setStep(2);}});
+$('#embedding-matrix').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();selectPatch(Math.min(tokenCount()-1,Math.floor((e.clientY-r.top)/r.height*tokenCount()))-(state.model==='vit'?1:0));if(state.selected<0)openExpansion(2);else multiplicationOverlay.open('embedding',e.currentTarget);});
+$('#embedding-matrix').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(state.selected<0)openExpansion(2);else multiplicationOverlay.open('embedding',e.currentTarget);return;}if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();selectPatch(state.selected+(e.key==='ArrowUp'?-1:1));setStep(2);}});
 const dialog=$('#about-dialog');['#about-open','#method-open','#demo-note'].forEach(id=>$(id).addEventListener('click',()=>dialog.showModal()));$('#about-close').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 $('#upload-button').addEventListener('click',()=>$('#upload').click());
 $('#upload').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>20*1024*1024)throw Error('Please choose an image smaller than 20 MB.');if(!f.type.startsWith('image/')||f.type==='image/svg+xml')throw Error('Please use a PNG, JPEG, WebP, GIF, or AVIF image.');const nextURL=URL.createObjectURL(f);try{await loadImage(nextURL);}catch(err){URL.revokeObjectURL(nextURL);throw err;}if(uploadURL)URL.revokeObjectURL(uploadURL);uploadURL=nextURL;if(!$('#sample option[value=custom]'))$('#sample').insertAdjacentHTML('beforeend','<option value="custom">Your image</option>');$('#sample').value='custom';state.sample='custom';}catch(err){handleError(err);}finally{e.target.value='';}});
@@ -246,4 +290,10 @@ function renderRope(){const [qr,qc,kr,kc]=labPositions(),scale=+$('#rope-frequen
 $$('[data-rope]').forEach(b=>b.addEventListener('click',()=>{state.ropeMode=b.dataset.rope;renderRope();}));['qr','qc','kr','kc','rope-frequency'].forEach(id=>$('#'+id).addEventListener('input',renderRope));
 $('#shift-both').addEventListener('click',()=>{['qr','qc','kr','kc'].forEach(id=>$('#'+id).value=+$('#'+id).value+1);renderRope();$('#status').textContent=`Both positions shifted. The positional dot product remains ${$('#rope-score').textContent}.`;});
 $('#packing-grid').innerHTML=Array.from({length:100},(_,i)=>{const r=Math.floor(i/10),c=i%10;return `<i class="${r<6&&c<6?'a':r>=6&&c>=6?'b':''}"></i>`;}).join('');
+const multiplicationOverlay=createMultiplicationOverlay({document,getData:()=>({s:state,patches,result,imageURL}),onPatch:index=>selectPatch(index)});
+const patchConnections=mountPatchConnections($('#architecture'),()=>({s:state,result}));
+patchTour=createPatchTour({root:$('#architecture'),trigger:$('#tour'),getData:()=>({s:state,patches,result,imageURL}),
+ prepare(){if(!result)return false;patchTour?.stop();architectureMotion.finish();if(multiplicationOverlay.isOpen)multiplicationOverlay.close();state.expanded=null;if(state.selected<0){state.selected=0;state.key=tokenIndex();}render();revealSelectedItem($('#patch-sequence'));revealSelectedItem($('#ffn-viz .mlp-lanes-scroll'));return true;},
+ onStep(step){state.step=step;render();},onAnnouncement(message){$('#status').textContent=message;}
+});
 renderRope();loadImage('assets/bird.svg').catch(handleError);
