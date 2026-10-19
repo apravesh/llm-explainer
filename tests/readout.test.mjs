@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {runEncoder,patchify,rng,linear} from '../src/engine.mjs';
 import {STAGE_NAMES,expansionMarkup} from '../src/expansion.mjs';
-import {finalRepresentation,decoderPrefix,compactNextMarkup,nextStageMarkup,outputReadoutMarkup} from '../src/readout.mjs';
+import {finalRepresentation,outputMatrixMarkup,outputColor,decoderPrefix,compactNextMarkup,nextStageMarkup,outputReadoutMarkup} from '../src/readout.mjs';
 function fixture(model='vit'){
  const r=rng(156),patches=patchify(Uint8ClampedArray.from({length:32*48*4},()=>Math.floor(r()*256)),48,32,16),result=runEncoder(patches,3,model);
  return {patches,result,s:{model,expanded:6,selected:1,key:2,patch:16,cols:3,rows:2,width:48,height:32,layer:0,head:0,scalar:7,dimension:0}};
@@ -19,6 +19,18 @@ for(const model of ['vit','pixtral']){
   const {s,result,patches}=fixture(model),html=outputReadoutMarkup({...s,expanded:5},patches,result);
   const selected=html.match(/data-final-vector="([^"]+)"/)[1].split(',').map(Number);
   assert.deepEqual(selected,finalRepresentation(s,result).selected);assert.match(html,/not class labels or text/);assert.match(html,/data-expand-step="6"/);assert.doesNotMatch(html,/data-projector-vector|data-trace-sum/);
+ });
+ test(`${model}: both readout path cards are keyboard-accessible model switches`,()=>{
+  const {s,result,patches}=fixture(model),html=nextStageMarkup(s,patches,result);
+  assert.match(html,/class="ro-two-paths" role="group" aria-label="Choose the encoder readout path"/);
+  const cards=[...html.matchAll(/<button type="button" class="ro-path ([^"]*)" data-next-model="(vit|pixtral)" aria-pressed="(true|false)" aria-controls="readout-path-content">([\s\S]*?)<\/button>/g)];
+  assert.equal(cards.length,2);
+  for(const [,classes,path,pressed,content] of cards){
+   assert.equal(pressed,String(path===model));assert.equal(classes.includes('is-active'),path===model);
+   assert.match(content,path===model?/Currently viewing/:/Explore this path →/);
+   assert.match(content,path==='pixtral'?/all patches → projector → text decoder/:/final \[CLS\] → class scores/);
+  }
+  assert.equal((html.match(/id="readout-path-content"/g)||[]).length,1);
  });
  test(`${model}: browsing the handoff does not mutate encoder tensors or selection`,()=>{
   const {s,result,patches}=fixture(model),snapshot=structuredClone(result),selected=s.selected;
@@ -69,4 +81,43 @@ test('projector arithmetic remains inspectable at the new handoff stage',()=>{
 });
 test('compact preview distinguishes classification from text decoding',()=>{
  assert.match(compactNextMarkup('vit'),/classifier not run/);assert.match(compactNextMarkup('pixtral'),/Causal text decoder/);assert.match(compactNextMarkup('pixtral'),/decoder schematic only/);
+});
+
+for(const model of ['vit','pixtral']){
+ test(`${model}: both output zoom states render every final activation with identical colors`,()=>{
+  const {s,result,patches}=fixture(model),before=structuredClone(result);
+  const cellData=html=>[...html.matchAll(/data-output-value="([^"]+)" style="background:([^"]+)"/g)].map(([,value,color])=>({value:+value,color}));
+  const expanded=outputMatrixMarkup(s,patches,result),compact=outputMatrixMarkup(s,patches,result,{compact:true});
+  const expected=result.final.flat().map(value=>({value,color:outputColor(value)}));
+  assert.deepEqual(cellData(expanded),expected);assert.deepEqual(cellData(compact),expected);
+  assert.equal((expanded.match(/data-output-patch=/g)||[]).length,result.final.length);
+  assert.equal((compact.match(/class="ro-compact-row /g)||[]).length,result.final.length);
+  assert.doesNotMatch(compact,/<button|id="output-matrix"/);assert.deepEqual(result,before);
+ });
+ test(`${model}: selecting any output row preserves the complete matrix and one keyboard tab stop`,()=>{
+  const {s,result,patches}=fixture(model);
+  for(let selected=model==='vit'?-1:0;selected<patches.length;selected++){
+   const state={...s,expanded:5,selected},html=outputReadoutMarkup(state,patches,result),matrix=outputMatrixMarkup(state,patches,result);
+   const row=matrix.match(/<button[^>]*data-output-patch="(-?\d+)"[^>]*aria-pressed="true" tabindex="0"/);
+   assert.ok(row);assert.equal(+row[1],selected);
+   assert.equal((matrix.match(/aria-pressed="true"/g)||[]).length,1);assert.equal((matrix.match(/tabindex="0"/g)||[]).length,1);
+   const index=selected+(model==='vit'?1:0),vector=html.match(/data-final-vector="([^"]+)"/)[1].split(',').map(Number);
+   assert.deepEqual(vector,result.final[index]);assert.equal((html.match(/data-output-value=/g)||[]).length,result.final.length*24);
+   for(const v of vector)assert.ok(html.includes(`style="background:${outputColor(v)}" title="Dimension`));
+  }
+ });
+ test(`${model}: output matrix always shows the final representation regardless of inspected layer`,()=>{
+  const {s,result,patches}=fixture(model),expected=outputMatrixMarkup(s,patches,result);
+  for(let layer=0;layer<result.layers.length;layer++)assert.equal(outputMatrixMarkup({...s,layer,compareCausal:true},patches,result),expected);
+ });
+}
+test('output palette preserves sign, zero and explicit saturation at ±2',()=>{
+ assert.equal(outputColor(0),'rgb(245,245,245)');assert.equal(outputColor(2),'rgb(107,143,207)');assert.equal(outputColor(-2),'rgb(204,143,115)');
+ assert.equal(outputColor(20),outputColor(2));assert.equal(outputColor(-20),outputColor(-2));assert.notEqual(outputColor(.5),outputColor(-.5));
+});
+test('output matrix does not truncate large patch grids',()=>{
+ const {s,result}=fixture('pixtral'),patches=Array.from({length:192},(_,i)=>({row:Math.floor(i/16),col:i%16}));
+ const large={...result,final:Array.from({length:192},(_,i)=>result.final[i%result.final.length])};
+ const html=outputMatrixMarkup({...s,rows:12,cols:16,selected:191},patches,large);
+ assert.equal((html.match(/data-output-value=/g)||[]).length,192*24);assert.match(html,/data-output-patch="191"[^>]*aria-pressed="true" tabindex="0"/);
 });

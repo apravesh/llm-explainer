@@ -21,11 +21,13 @@ function harness({native=true,animate=true,reduced=false,hidden=false}={}){
  const preview=element('preview',overview),panel=element('panel',zoomed),hero=element('hero',{x:90,y:100,width:16,height:16});
  panel.cloneNode=()=>({animate:panel.animate,style:fakeStyle(),className:'stage-expansion',removeAttribute(){},querySelectorAll(){return [];},setAttribute(){},remove(){}});
  const sequence=element('sequence',{x:80,y:40,width:100,height:380});
+ const outputCompact=element('outputCompact',{x:800,y:100,width:70,height:192}),outputExpanded=element('outputExpanded',{x:300,y:200,width:320,height:480});
+ const embeddingCompact=element('embeddingCompact',{x:210,y:80,width:100,height:192}),embeddingExpanded=element('embeddingExpanded',{x:300,y:200,width:320,height:480});
  const stage={querySelector:selector=>selector==='.stage-content'?preview:panel};
  const titles=Array.from({length:6},(_,i)=>element('title'+i,{x:30+i*50,y:10,width:40,height:20}));
  const root=element('root',{x:20,y:40,width:900,height:360});root.ownerDocument=doc;root.parentElement=new Events();
  root.querySelectorAll=()=>titles;
- root.querySelector=selector=>selector.startsWith('[data-stage=')?stage:['#patch-sequence','.token-rail'].includes(selector)?sequence:hero;
+ root.querySelector=selector=>selector.startsWith('[data-stage=')?stage:selector==='#embedding-matrix'?embeddingCompact:selector==='#expanded-embedding-matrix'?embeddingExpanded:selector==='.ro-compact-matrix'?outputCompact:selector==='.ro-output-matrix'?outputExpanded:['#patch-sequence','.token-rail'].includes(selector)?sequence:hero;
  doc.body={append(){}};
  if(native)doc.startViewTransition=callback=>{
   const ready=deferred(),finished=deferred();const tr={callback,ready:ready.promise,finished:finished.promise,skipped:false,
@@ -96,4 +98,20 @@ test('native API failure updates exactly once and removes temporary names',()=>{
 });
 test('ordinary same-stage updates do not replay the zoom',()=>{
  const h=harness();h.run(1);h.transitions[0].capture();h.motion.finish();h.run(1);assert.equal(h.transitions.length,1);assert.equal(h.mutations,2);assert.equal(h.motion.active,false);h.motion.dispose();
+});
+
+test('output matrix has a shared zoom identity when expanding and collapsing',async()=>{
+ const h=harness(),compact=h.root.querySelector('.ro-compact-matrix');
+ h.run(5);assert.equal(compact.style.viewTransitionName,'encoder-output');
+ h.transitions[0].capture();assert.equal(compact.style.viewTransitionName,'');assert.equal(h.root.querySelector('.ro-output-matrix').style.viewTransitionName,'encoder-output');
+ h.transitions[0].end();await tick();assert.equal(compact.style.viewTransitionName,'');
+ h.run(null);assert.equal(h.root.querySelector('.ro-output-matrix').style.viewTransitionName,'encoder-output');
+ h.transitions[1].capture();assert.equal(h.root.querySelector('.ro-output-matrix').style.viewTransitionName,'');assert.equal(compact.style.viewTransitionName,'encoder-output');
+ h.transitions[1].end();await tick();assert.equal(compact.style.viewTransitionName,'');h.motion.dispose();
+});
+
+test('embedding matrix keeps a shared zoom identity in both directions',async()=>{
+ const h=harness(),compact=h.root.querySelector('#embedding-matrix'),expanded=h.root.querySelector('#expanded-embedding-matrix');
+ h.run(2);assert.equal(compact.style.viewTransitionName,'encoder-embedding');h.transitions[0].capture();assert.equal(compact.style.viewTransitionName,'');assert.equal(expanded.style.viewTransitionName,'encoder-embedding');h.transitions[0].end();await tick();assert.equal(expanded.style.viewTransitionName,'');
+ h.run(null);assert.equal(expanded.style.viewTransitionName,'encoder-embedding');h.transitions[1].capture();assert.equal(compact.style.viewTransitionName,'encoder-embedding');assert.equal(expanded.style.viewTransitionName,'');h.transitions[1].end();await tick();assert.equal(compact.style.viewTransitionName,'');h.motion.dispose();
 });

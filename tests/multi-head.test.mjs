@@ -51,3 +51,12 @@ for(const model of ['vit','pixtral']){
   }assert.deepEqual(result,copy);
  });
 }
+for(const model of ['vit','pixtral'])test(`${model}: head and key use diagram selection without redundant dropdowns`,()=>{
+ const {s,patches,result}=fixture(model);
+ for(const headDetailOpen of [false,true]){
+  const html=expansionMarkup({...s,headDetailOpen},patches,result,'');
+  assert.doesNotMatch(html,/id="expand-(?:key|head)"|data-inspect="(?:key|head)"/);
+  for(let head=0;head<3;head++)assert.match(html,new RegExp(`data-mh-open="${head}"`));
+  if(headDetailOpen){assert.match(html,/id="flow-scores"/);assert.match(html,/id="flow-weights"/);assert.equal((html.match(/data-attn-key=/g)||[]).length,result.input.length);}
+ }
+});
