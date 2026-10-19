@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+work/
+# Local review screenshots are not part of the website source.
+*-preview.jpg
+preview.jpg
+zoom-preview.gif
