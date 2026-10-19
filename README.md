@@ -90,11 +90,39 @@ A seventh **“What next?”** stage sits immediately to the right of Output on 
 - **Symbolic generation walkthrough:** T₀ and T₁ stand for illustrative prompt slots, not actual tokenizer output. The last prefix position predicts t₁; after that token is appended, the next pass predicts t₂, and so on. These are placeholders; no tokenizer, decoder, vocabulary logits, sampling, or text generation is run.
 - Switching paths updates the selected model. Clicking an image slot selects that patch and updates its actual projected vector. Generated-step controls never modify the image vectors or the encoder result.
 
+## Follow a patch playback
+
+The **Follow a patch** play button starts an actual seven-stage animated walkthrough in the overview, rather than opening a static expanded panel. The selected patch is highlighted as its RGB pixels are scanned, channels flattened, embedding dot product accumulated, attention values mixed, MLP expansion / activation / contraction / residual processed, and final encoder row followed to the appropriate readout. Numeric frames use the existing deterministic encoder tensors; the classifier or decoder handoff is explicitly symbolic.
+
+The playback bar includes Pause/Resume, Previous/Next, per-stage buttons, Replay, and Close. All seven stages advance automatically; completion offers replay. Manual diagram interactions or model/input changes end the tour rather than fighting the user, background tabs pause, Escape exits, and reduced motion shows static completed frames with manual stage navigation. The same patch and inspected block/head are retained. Starting from CLS chooses patch 0, since this walkthrough follows an image patch.
+
+## Animated multiplication cutaways
+
+Click **MLP Expansion**, **Contraction**, or any per-token MLP vector to open a floating calculation without changing the architecture's zoom level. Embedding matrices (click / Enter) and the Pixtral projector also open this view. The full expanded stages and their static numeric inspectors remain available.
+
+- The overlay uses the exact live input, shared weight matrix, and **complete output matrix** from the teaching encoder. The equation shows X (N × input width) × W (input width × output width) = Y (N × output width). The selected input row is displayed vertically for its dot-product cutaway; every output token and feature stays visible to the right. Click a result cell or use arrow keys to select its patch and output feature; the same feature is highlighted in the weight column and numeric output row below. Full result colors stay visible while the running sum is explicitly labeled partial. A highlighted input row and weight column animate into the running dot-product sum. Click a weight cell or output feature to inspect it; Arrow keys work on the weight matrix.
+- Play/Pause, Step +1, the term slider, Reset, and Sweep this row allow different levels of detail. Long RGB vectors advance in explicitly labeled groups while retaining every term; the slider and single-step control inspect individual terms.
+- All patches (plus ViT's CLS for MLP operations) stay selectable in the overlay. Switching patches resets the partial sum, updates the diagram underneath, and never changes the zoom level. Escape, Close, or the backdrop return to the diagram with focus restored. Background tabs pause; reduced-motion users get immediate results and can still step manually.
+- The overview retains every patch in a scrolling sequence. Curved connections link visible patches to their embedding rows. MLP lanes link each normalized token to its own wider activated vector and contraction result. **The computations are independent, not the weights:** every token shares the same W₁, W₂, and (for Pixtral) W₃ within a block.
+- The MLP expansion overlay ends *before* GELU / SiLU gating; contraction ends *before* residual addition. Captions identify these boundaries. Colors are for signed values, not attention probabilities. Displayed numbers are rounded but accumulation uses full precision.
+
+## Full embedding matrix
+
+The expanded Embedding stage retains the complete colored **block-1 input matrix**, not just one patch's projection calculation. It uses the same `result.input` tensor and signed color scale as the compact embedding canvas. ViT rows already include learned position embeddings (including the leading CLS row); Pixtral rows already include RMSNorm. The raw projection shown by the multiplication overlay is explicitly distinguished from these prepared inputs.
+
+Click a matrix row or a token in the patch rail to select the same row, matching numeric vector, and calculation. Arrow keys / Home / End cover every row, including CLS. Matrix scroll position and the static calculation's open state survive selection changes. The full pixel/weight calculation is available in the disclosure below; the animation opens directly from the selected-row card. Zooming gives the compact and enlarged matrix a shared animation identity. The inspected block/head controls do not change this pre-attention input matrix.
+
+## Full output matrix
+
+The compact Output preview and expanded Output stage render the same complete final encoder matrix, with the same signed activation colors. Every patch row and all 24 features remain present; ViT includes a leading [CLS] row. Larger grids scroll rather than omitting rows.
+
+Click a matrix row or a patch in the left sequence to inspect its vector; both selections stay synchronized. The numeric detail keeps the same cell colors. Arrow keys and Home/End move between rows, including [CLS], and preserve the matrix scroll position. Hover a cell for its precise value. This remains the output after all encoder blocks, regardless of the inspected-block slider. The matrix also has a shared identity in the zoom animation.
+
 ## Multi-head attention overview
 
 Self-attention opens with **all three teaching-model heads side by side**. Projected Q/K/V features are split into three color-coded groups of eight. Each head shows its complete N × 8 Q, K, and V matrices, an N × N attention preview, and the selected query’s eight-value output. Every head sees all tokens and projects from all 24 input features; it is not assigned a subset of patches or input features.
 
-Click a head to reveal its existing connected attention flow below the overview, without hiding the other head previews or patch column. “Back to all heads” closes only that detail. The head dropdown and feature-group buttons select the same head.
+Click a head to reveal its existing connected attention flow below the overview, without hiding the other head previews or patch column. “Back to all heads” closes only that detail. Head cards and feature-group buttons select the head directly; the attention matrices and key strip select the query/key pair. Redundant Key and Head dropdowns are intentionally omitted.
 
 The lower flow concatenates the three outputs **in head order** (8 + 8 + 8 = 24), applies the actual 24 × 24 output projection Wₒ, and adds the original input residual. It does not average the heads. Click Wₒ to inspect that numerical multiplication. “Animate concatenation” moves each head’s actual output into its matching slot; it respects reduced motion and cleans up on stop, resize, or navigation.
 

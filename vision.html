@@ -15,7 +15,7 @@
 <main id="top">
   <section class="intro" aria-labelledby="page-title">
     <div><div class="eyebrow"><span class="tiny-line"></span> THE NEXT CHAPTER · VISION TRANSFORMERS</div><h1 id="page-title">An image is a sequence, <em>too.</em></h1><p>You know how transformers read words. Now see how they look at images.</p></div>
-    <button class="tour-button" id="tour"><span class="play-icon" aria-hidden="true">▶</span><span>Follow a patch<small>A step-by-step walkthrough</small></span><span aria-hidden="true">↗</span></button>
+    <button class="tour-button" id="tour" disabled><span class="play-icon" aria-hidden="true">▶</span><span>Follow a patch<small>Play the animated walkthrough</small></span><span aria-hidden="true">↗</span></button>
   </section>
   <section id="explorer" class="explorer" aria-label="Interactive vision encoder architecture">
     <div class="explorer-toolbar">
@@ -35,7 +35,7 @@
       <section class="stage output-stage" data-stage="5"><button class="stage-title" data-step="5"><span>06</span> Output <span class="stage-plus">↗</span></button><div class="stage-content"><div class="output-vectors" id="output-vectors"></div><div class="dimension" id="output-shape">37 × 24</div><div class="output-destination" id="output-destination"><span>[CLS]</span><i>↓</i>Classification head</div></div></section>
       <section class="stage next-stage" data-stage="6"><button class="stage-title" data-step="6"><span>07</span> What next? <span class="stage-plus">+</span></button><div class="stage-content"><button type="button" id="next-path-preview" class="next-preview-button" data-expand-step="6" aria-label="Explain CLS and the connection to the text decoder"></button></div></section>
     </div>
-    <div class="explorer-footnote"><span><i class="selected-dot"></i> Click + to expand any stage. Click a patch to inspect its pixels.</span><button id="demo-note">Untrained teaching model · 4 blocks · 3 heads · width 24 <span>ⓘ</span></button></div>
+    <div class="explorer-footnote"><span><i class="selected-dot"></i> Select a patch to trace its path. Click a matrix for animated math; + opens the full stage.</span><button id="demo-note">Untrained teaching model · 4 blocks · 3 heads · width 24 <span>ⓘ</span></button></div>
     <div id="status" class="sr-only" aria-live="polite"></div><div id="error" class="error" role="alert" hidden></div>
   </section>
   <section class="detail-panel" id="detail" aria-live="polite" aria-atomic="false">
