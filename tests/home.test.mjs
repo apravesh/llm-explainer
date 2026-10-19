@@ -13,8 +13,8 @@ test('local chapter and stylesheet links resolve from the project subpath',async
   assert.ok(!href.startsWith('/'),`${href} must preserve GitHub Pages project prefix`);await access(new URL('../'+href,import.meta.url));
  }
 });
-test('MoE is an under-construction page with a route back, not a fake article',()=>{
- assert.match(moe,/<strong>Currently under construction<\/strong>/);assert.match(moe,/class="back-link" href="\.\/"/);assert.doesNotMatch(moe,/<script/);
+test('MoE is a working chapter with routing controls, disclosure, and a route home',()=>{
+ assert.match(moe,/id="moe-explorer"/);assert.match(moe,/id="moe-k"/);assert.match(moe,/src="src\/moe-app.mjs"/);assert.match(moe,/aria-label="LLM Explainer home"/);assert.doesNotMatch(moe,/Currently under construction/);assert.match(moe,/untrained/i);
 });
 test('the complete vision chapter survives as a separate page with back navigation',()=>{
  for(const id of ['explorer','architecture','image-grid','rope-lab','comparison'])assert.match(vision,new RegExp(`id="${id}"`));
