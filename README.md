@@ -2,7 +2,11 @@
 
 A growing collection of interactive explanations of language and multimodal model architectures.
 
-Repository: `apravesh/llm-explainer`. The repository is intended to remain private until its owner chooses to publish it. No deployment workflow is enabled in this source package.
+Repository: `apravesh/llm-explainer`.
+
+**Website:** https://apravesh.github.io/llm-explainer/
+
+The repository is public. GitHub Pages publishes the root of `main` over HTTPS; no external host or custom deployment workflow is required.
 
 ## Current chapter: Vision Encoder Explainer
 
@@ -152,7 +156,9 @@ After editing the source, regenerate the offline build with `node build.mjs`.
 
 ## Deploy
 
-Copy the static files (`index.html`, `styles.css`, `src/`, `assets/`) to any static host, such as GitHub Pages, Netlify, or Cloudflare Pages. There is no build step. This deliverable has not been publicly deployed.
+GitHub Pages is configured to deploy from **main / (root)**. Pushing updates to `main` triggers publication. The `.nojekyll` marker serves the static HTML, CSS, JavaScript modules, and SVG assets without Jekyll processing.
+
+The hosted entry point is `index.html`; `standalone.html` remains available as the self-contained offline version. Run `node build.mjs` after source edits to refresh that offline artifact. Check the repository’s Actions tab for deployment status.
 
 ## Next step toward a full research explainer
 
