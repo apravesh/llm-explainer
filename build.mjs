@@ -3,7 +3,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 const at=p=>new URL(p,import.meta.url);
 const svgData=async p=>'data:image/svg+xml;base64,'+Buffer.from(await readFile(at(p))).toString('base64');
 const samples=Object.fromEntries(await Promise.all(['bird','coast','poster'].map(async name=>[name,await svgData(`assets/${name}.svg`)])));
-let html=await readFile(at('index.html'),'utf8');
+let html=await readFile(at('vision.html'),'utf8');
 const css=await readFile(at('styles.css'),'utf8');
 const motion=(await readFile(at('src/motion.mjs'),'utf8')).replace(/^export /gm,'');
 const attentionFlow=(await readFile(at('src/attention-flow.mjs'),'utf8')).replace(/^import .*?;\n/gm,'').replace(/^export /gm,'');

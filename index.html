@@ -1,68 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Explore how a vision transformer turns pixels into contextual patch representations. A hands-on guide to ViT, Pixtral, attention, and 2D RoPE.">
-  <meta name="theme-color" content="#f8f9fb"><title>Vision Encoder Explainer — From pixels to understanding</title>
-  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A small collection of visual, hands-on explanations of language models. Start with transformers, explore vision encoders, and follow along as more chapters are added.">
+  <meta name="theme-color" content="#faf9f6">
+  <title>LLM Explainer — Notes on language models</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="journal.css">
 </head>
 <body>
-<a class="skip" href="#explorer">Skip to interactive explorer</a>
-<header class="site-header">
-  <a class="brand" href="#top" aria-label="Vision Encoder Explainer home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>VISION<span class="brand-light">EXPLAINER</span></a>
-  <nav aria-label="Main navigation"><a class="previous" href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener">↗ Text transformers</a><a href="#rope-lab">2D RoPE lab</a><a href="#comparison">ViT vs. Pixtral</a><button class="text-button" id="about-open">About <span aria-hidden="true">↗</span></button></nav>
-</header>
-<main id="top">
-  <section class="intro" aria-labelledby="page-title">
-    <div><div class="eyebrow"><span class="tiny-line"></span> THE NEXT CHAPTER · VISION TRANSFORMERS</div><h1 id="page-title">An image is a sequence, <em>too.</em></h1><p>You know how transformers read words. Now see how they look at images.</p></div>
-    <button class="tour-button" id="tour"><span class="play-icon" aria-hidden="true">▶</span><span>Follow a patch<small>A step-by-step walkthrough</small></span><span aria-hidden="true">↗</span></button>
-  </section>
-  <section id="explorer" class="explorer" aria-label="Interactive vision encoder architecture">
-    <div class="explorer-toolbar">
-      <div class="model-switch" role="group" aria-label="Encoder architecture"><button data-model="vit" aria-pressed="true">ViT <span>Classic</span></button><button data-model="pixtral" aria-pressed="false">Pixtral <span>Adaptive</span></button></div>
-      <div class="toolbar-control"><label for="sample">Image</label><select id="sample"><option value="bird">Kingfisher</option><option value="coast">Coastline</option><option value="poster">Poster</option></select><button id="upload-button" class="icon-button" aria-label="Upload your own image" title="Use your own image (stays on this device)">↑</button><input type="file" id="upload" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden></div>
-      <div class="toolbar-control"><label for="patch-size">Patch</label><select id="patch-size"><option value="16">16 × 16</option><option value="24">24 × 24</option><option value="32">32 × 32</option></select></div>
-      <div class="layer-control"><label for="layer">Block <strong id="layer-number">1</strong><span> / 4</span></label><input id="layer" type="range" min="0" max="3" value="0" aria-label="Transformer block"><span class="live-label"><i></i> LIVE · UNTRAINED</span></div>
-    </div>
-    <div class="architecture" id="architecture">
-      <section class="stage image-stage" data-stage="0"><button class="stage-title" data-step="0"><span>01</span> Input image <span class="stage-plus">↗</span></button><div class="stage-content"><div id="image-grid" class="image-grid" aria-label="Select an image patch"></div><div class="image-caption"><span id="image-shape">96 × 96 RGB</span><span id="image-fit">Square crop</span></div><div class="query-caption"><span class="selected-dot"></span> Query patch <strong id="selected-coordinate">(3, 3)</strong></div></div></section>
-      <section class="stage patches-stage" data-stage="1"><button class="stage-title" data-step="1"><span>02</span> Patches <span class="stage-plus">↗</span></button><div class="stage-content"><div id="patch-sequence" class="patch-sequence" aria-label="Patch sequence"></div><div class="dimension" id="patch-count">36 patches</div><div class="micro-label">Flatten each patch</div></div></section>
-      <section class="stage embed-stage" data-stage="2"><button class="stage-title" data-step="2"><span>03</span> Embedding <span class="stage-plus">↗</span></button><div class="stage-content"><div class="matrix-shell"><canvas id="embedding-matrix" width="124" height="204" tabindex="0" role="img" aria-label="Input embeddings, one row per token"></canvas><div class="matrix-scale"><span>−</span><i></i><span>+</span></div></div><div class="dimension" id="embedding-shape">37 × 24</div><button id="position-button" class="position-badge">+ Position embedding</button></div></section>
-      <div class="encoder-group"><div class="block-label"><span id="block-caption">TRANSFORMER BLOCK 1</span><span class="residual-label">↷ residual connections</span></div>
-        <section class="stage attention-stage active" data-stage="3"><button class="stage-title" data-step="3"><span>04</span> Self-attention <span class="stage-plus">↗</span></button><div class="stage-content"><div class="attention-computation"><div class="qkv-column"><div class="qkv q"><b>Q</b><span id="q-swatch"></span></div><div class="qkv k"><b>K</b><span id="k-swatch"></span></div><div class="qkv v"><b>V</b><span id="v-swatch"></span></div><span class="micro-label">norm → project</span></div><svg class="qkv-connections" viewBox="0 0 30 168" aria-hidden="true"><path d="M0 38C23 38 10 80 30 80" class="q-line"/><path d="M0 82H30" class="k-line"/><path d="M0 125C23 125 10 159 30 159" class="v-line"/></svg><div class="attention-matrix-wrap"><span class="matrix-axis-top">KEY PATCHES →</span><canvas id="attention-matrix" width="164" height="164" tabindex="0" role="img" aria-label="Bidirectional attention matrix. Use arrow keys to inspect weights."></canvas><span class="matrix-axis-bottom" id="matrix-caption">37 × 37 · no causal mask</span></div></div><div class="head-picker" role="group" aria-label="Attention head"><span>Head</span><button data-head="0" aria-pressed="true">1</button><button data-head="1" aria-pressed="false">2</button><button data-head="2" aria-pressed="false">3</button><span class="all-to-all">all ↔ all</span></div></div></section>
-        <section class="stage mlp-stage" data-stage="4"><button class="stage-title" data-step="4"><span>05</span> <b id="ffn-title">MLP</b><span class="stage-plus">↗</span></button><div class="stage-content"><div class="ffn-viz" id="ffn-viz" aria-label="MLP expands and contracts each token vector"></div><div class="dimension">24 → 48 → 24</div><div class="micro-label" id="ffn-type">GELU activation</div></div></section>
-      </div>
-      <section class="stage output-stage" data-stage="5"><button class="stage-title" data-step="5"><span>06</span> Output <span class="stage-plus">↗</span></button><div class="stage-content"><div class="output-vectors" id="output-vectors"></div><div class="dimension" id="output-shape">37 × 24</div><div class="output-destination" id="output-destination"><span>[CLS]</span><i>↓</i>Classification head</div></div></section>
-      <section class="stage next-stage" data-stage="6"><button class="stage-title" data-step="6"><span>07</span> What next? <span class="stage-plus">+</span></button><div class="stage-content"><button type="button" id="next-path-preview" class="next-preview-button" data-expand-step="6" aria-label="Explain CLS and the connection to the text decoder"></button></div></section>
-    </div>
-    <div class="explorer-footnote"><span><i class="selected-dot"></i> Click + to expand any stage. Click a patch to inspect its pixels.</span><button id="demo-note">Untrained teaching model · 4 blocks · 3 heads · width 24 <span>ⓘ</span></button></div>
-    <div id="status" class="sr-only" aria-live="polite"></div><div id="error" class="error" role="alert" hidden></div>
-  </section>
-  <section class="detail-panel" id="detail" aria-live="polite" aria-atomic="false">
-    <div class="detail-copy"><div class="eyebrow" id="detail-kicker">04 / SELF-ATTENTION</div><h2 id="detail-title">Every patch, in conversation.</h2><p id="detail-description"></p><div id="detail-formula" class="formula"></div><div id="detail-note" class="detail-note"></div></div>
-    <div class="detail-visual" id="detail-visual"></div>
-    <details class="tensor-inspector" id="tensor-inspector"><summary>Inspect the query–key calculation <span>8 dimensions per head</span></summary><div id="tensor-content"></div></details>
-    <div class="detail-pagination"><button id="step-back" class="icon-button" aria-label="Previous architecture step">←</button><span id="step-count">4 / 7</span><button id="step-next" class="icon-button" aria-label="Next architecture step">→</button></div>
-  </section>
-  <div class="section-rule"><span>LOOK A LITTLE CLOSER</span><span>↓</span></div>
-  <section class="rope-section" id="rope-lab" aria-labelledby="rope-heading">
-    <div class="section-heading"><div><div class="eyebrow">POSITION, WITHOUT A POSITION TABLE</div><h2 id="rope-heading">A sense of <em>where.</em></h2><p>RoPE rotates pairs of numbers inside queries and keys. In 2D, some pairs track rows; others track columns.</p></div><div class="rope-mode" role="group" aria-label="RoPE mode"><button data-rope="1d" aria-pressed="false">1D RoPE</button><button data-rope="2d" aria-pressed="true">2D RoPE</button></div></div>
-    <div class="rope-playground">
-      <div class="rope-controls"><div class="lab-label">MOVE TWO PATCHES</div><div class="coordinate-row"><span class="coordinate-label query-color">Q <small>query</small></span><label>row <input id="qr" aria-label="Query row" type="number" min="0" max="20" value="1"></label><label>col <input id="qc" aria-label="Query column" type="number" min="0" max="20" value="1"></label></div><div class="coordinate-row"><span class="coordinate-label key-color">K <small>key</small></span><label>row <input id="kr" aria-label="Key row" type="number" min="0" max="20" value="3"></label><label>col <input id="kc" aria-label="Key column" type="number" min="0" max="20" value="2"></label></div><div class="frequency-control"><label for="rope-frequency">Frequency scale <output id="frequency-label">1.0×</output></label><input id="rope-frequency" type="range" min="2" max="20" value="10"></div><button id="shift-both" class="shift-button">Shift both patches +1, +1 <span>↗</span></button><p class="small-copy">Their absolute angles change.<br>Their relative attention score does not.</p></div>
-      <div class="rotation-visual"><div class="rotation-circles" id="rotation-circles"></div><div class="rotation-key"><span><i class="query-dot"></i> Query</span><span><i class="key-dot"></i> Key</span><span>Dashed = before rotation</span></div></div>
-      <div class="rope-result"><div class="lab-label">POSITIONAL DOT PRODUCT</div><div class="score-value" id="rope-score" aria-live="polite">0.000</div><div id="rope-displacement" class="relative-displacement"></div><div class="rope-equation">(Rᵢq)ᵀ(Rⱼk)<br><span>= qᵀRⱼ₋ᵢk</span></div><p id="rope-mode-note" class="small-copy"></p></div>
-    </div>
-    <div class="rope-bottom"><span>↳</span><p><strong>Why every layer?</strong> Each attention layer makes fresh queries and keys. Rotating those new vectors gives that layer direct access to relative position—not just whatever positional clues survived in the hidden states. The values are not rotated.</p><a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener">RoFormer paper ↗</a></div>
-  </section>
-  <section id="comparison" class="comparison-section" aria-labelledby="comparison-heading">
-    <div class="section-heading"><div><div class="eyebrow">SAME TRANSFORMER. A DIFFERENT DESIGN GOAL.</div><h2 id="comparison-heading">From ViT to <em>Pixtral.</em></h2><p>Not a replacement for attention. A vision encoder designed for a multimodal language model.</p></div><button id="try-pixtral" class="secondary-button">Try Pixtral above ↑</button></div>
-    <div class="comparison-layout"><div class="comparison-table"><div class="comparison-row table-head"><span>DESIGN CHOICE</span><strong>Classic ViT-B/16</strong><strong>Pixtral-ViT (12B)</strong></div><div class="comparison-row"><span>Image geometry</span><span>Typically fixed-size, square input</span><span>Variable size and aspect ratio</span></div><div class="comparison-row"><span>Position</span><span>Learned absolute embeddings at input</span><span>2D RoPE in every attention layer</span></div><div class="comparison-row"><span>Feed-forward</span><span>MLP with GELU</span><span>Gated feed-forward network</span></div><div class="comparison-row"><span>Readout</span><span>[CLS] token → classification head</span><span>Patch vectors → projector → LLM</span></div><div class="comparison-row"><span>Full-size encoder</span><span>12 blocks · 12 heads · width 768</span><span>24 blocks · 16 heads · width 1,024</span></div></div>
-      <aside class="packing"><div class="lab-label">MANY IMAGES. ONE BATCH.</div><div id="packing-grid" class="packing-grid" role="img" aria-label="Block-diagonal attention mask: patches attend only within their own image"></div><div class="packing-legend"><span><i></i> Image A</span><span><i></i> Image B</span><span>blank = masked</span></div><h3>Pack, don’t pad.</h3><p>Pixtral packs image sequences together. A block-diagonal mask keeps attention inside each image; the language decoder combines them later.</p></aside></div>
-    <div class="reading-note"><strong>A note on resolution.</strong> Flexible does not mean unlimited. Bigger images produce more patches, and dense encoder attention scales quadratically with the patch count. The demo uses small images to keep every number inspectable.</div>
-  </section>
-  <section class="closing"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><h3>Pixels in. Contextual representations out.</h3><p>The transformer is familiar. The tokens—and their geometry—are new.</p></div><a href="#explorer">Back to the explorer ↑</a></section>
-</main>
-<footer><div><strong>VISION EXPLAINER</strong><span>An independent companion inspired by <a href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener">Transformer Explainer ↗</a>. Not affiliated with Georgia Tech or Mistral.</span></div><div><a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener">ViT paper ↗</a><a href="https://arxiv.org/abs/2410.07073" target="_blank" rel="noopener">Pixtral paper ↗</a><button class="text-button" id="method-open">Method & limitations</button></div></footer>
-<dialog id="about-dialog" aria-labelledby="about-title"><button id="about-close" class="icon-button dialog-close" aria-label="Close about dialog">×</button><div class="eyebrow">UNDER THE HOOD</div><h2 id="about-title">Real calculations.<br>A teaching-sized model.</h2><p>This explorer runs a deterministic, <strong>untrained</strong> transformer entirely in your browser. Its visualizations are computed from the displayed image—not canned attention maps.</p><ul><li>Actual RGB patchification and linear projection.</li><li>4 blocks, 3 attention heads, 24 hidden dimensions, 8 dimensions per head, and a 48-wide FFN.</li><li>ViT path: input position vectors, a [CLS] token, layer normalization, and GELU MLPs.</li><li>Pixtral path: aspect-preserving resize with edge padding, RMS normalization, per-layer 2D RoPE, a gated FFN, and a two-layer teaching projector (24 → 32 → 32).</li></ul><p><strong>What this is not:</strong> pretrained ViT or Pixtral inference. All weights, including position embeddings and [CLS], are seeded random parameters. Heads do not have learned semantic roles. There are no classification predictions or language generation. The “What next?” stage shows actual encoder/projector vectors and a symbolic decoder handoff—not a running text model.</p><p>The attention-stage decoder-mask switch is a comparison for all heads in the inspected block, using the encoder’s Q/K/V. The concatenation and output projection show comparison values, but the actual encoder run and later blocks remain unchanged. The value-mixing animation computes partial sums and returns the exact head output; it is not a learned explanation of the image.</p><p>The RoPE lab isolates the position mechanism with fixed vectors and an adjustable frequency scale; its score is not the full encoder attention score. It uses the Pixtral paper’s alternating row/column pair convention.</p><p>Images stay on your device. Sample illustrations are original SVG artwork included with this demo. No accounts, APIs, analytics, or model downloads.</p><div class="source-links"><a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener">ViT paper ↗</a><a href="https://arxiv.org/abs/2410.07073" target="_blank" rel="noopener">Pixtral paper ↗</a><a href="https://github.com/mistralai/mistral-inference" target="_blank" rel="noopener">Mistral implementation ↗</a></div></dialog>
-<script type="module" src="src/app.mjs"></script>
-</body></html>
+  <a class="skip-link" href="#chapters">Skip to chapters</a>
+  <div class="journal-shell">
+    <header class="journal-header">
+      <a class="journal-brand" href="./" aria-label="LLM Explainer home"><span class="journal-mark" aria-hidden="true">[ ]</span> LLM EXPLAINER</a>
+      <span class="header-note">A growing notebook</span>
+    </header>
+    <main>
+      <section class="journal-intro" aria-labelledby="page-title">
+        <p class="eyebrow">LEARN BY LOOKING INSIDE</p>
+        <h1 id="page-title">Notes on<br><em>language models.</em></h1>
+        <p class="intro-copy">A place to understand how language models work, one idea at a time. Visual explanations, interactive experiments, and a little math along the way.</p>
+      </section>
+      <section id="chapters" aria-labelledby="chapters-title">
+        <div class="list-heading"><h2 id="chapters-title">Start exploring</h2><span>THREE PLACES TO BEGIN</span></div>
+        <ol class="chapter-list">
+          <li>
+            <a class="chapter-link" href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener noreferrer" aria-label="Text transformers — Transformer Explainer by Polo Club (opens in a new tab)">
+              <span class="chapter-number" aria-hidden="true">01</span>
+              <div class="chapter-copy"><p class="chapter-kicker">THE FOUNDATIONS <span class="external-credit">· BY POLO CLUB</span></p><h3>Text transformers</h3><p>Start with Transformer Explainer: a visual journey through tokens, attention, and next-token prediction.</p><span class="chapter-meta">External interactive guide <span class="sr-only">— opens in a new tab</span></span></div>
+              <span class="chapter-arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          <li>
+            <a class="chapter-link" href="vision.html">
+              <span class="chapter-number" aria-hidden="true">02</span>
+              <div class="chapter-copy"><p class="chapter-kicker">FROM WORDS TO IMAGES</p><h3>Vision encoders</h3><p>Follow an image through patches, embeddings, multi-head attention, and the connection to a text decoder.</p><span class="chapter-meta">Interactive chapter · ViT &amp; Pixtral</span></div>
+              <span class="chapter-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+          <li>
+            <a class="chapter-link" href="moe.html">
+              <span class="chapter-number" aria-hidden="true">03</span>
+              <div class="chapter-copy"><p class="chapter-kicker">COMING NEXT</p><h3>Mixture of Experts <span class="title-abbreviation">/ MoE</span></h3><p>A future chapter on experts, routing, and conditional computation.</p><span class="chapter-meta construction-meta"><span aria-hidden="true">◷</span> Currently under construction</span></div>
+              <span class="chapter-arrow" aria-hidden="true">→</span>
+            </a>
+          </li>
+        </ol>
+      </section>
+      <p class="notebook-note">Just the beginning. More explanations and experiments to come.</p>
+    </main>
+    <footer class="journal-footer"><span>Small steps toward understanding.</span><a href="https://github.com/apravesh/llm-explainer" target="_blank" rel="noopener noreferrer">Source on GitHub <span aria-hidden="true">↗</span></a></footer>
+  </div>
+</body>
+</html>

@@ -12,7 +12,12 @@ The repository is public. GitHub Pages publishes the root of `main` over HTTPS; 
 
 The first chapter explains how image patches become contextual representations in ViT and Pixtral, then connect to a text decoder. It is an independent companion inspired by [Transformer Explainer](https://poloclub.github.io/transformer-explainer/).
 
-The current root page opens the vision chapter. The repository name is deliberately broader than this first chapter so more topics can be added later. The existing site title stays **Vision Explainer** to accurately identify the chapter being shown.
+The root page is a simple learning notebook with three ordered chapter links:
+1. [Polo Club’s Transformer Explainer](https://poloclub.github.io/transformer-explainer/) — external text-transformer guide.
+2. [Vision encoders](https://apravesh.github.io/llm-explainer/vision.html) — this project’s interactive ViT/Pixtral chapter.
+3. [Mixture of Experts](https://apravesh.github.io/llm-explainer/moe.html) — a “Currently under construction” page, not an implemented explainer.
+
+The existing vision chapter is preserved at `vision.html`, with links back to the homepage. `standalone.html` remains the complete offline vision explainer. Homepage and placeholder use the lightweight `journal.css`; they require no JavaScript.
 
 ## Open instantly
 
@@ -131,7 +136,10 @@ Manual browser checks cover in-place expansion/collapse, pixels and channels, ou
 
 ## Files
 
-- `index.html` — semantic page structure and educational content
+- `index.html` — learning homepage and the ordered chapter links
+- `vision.html` — interactive vision chapter structure and educational content
+- `moe.html` — honest under-construction placeholder
+- `journal.css` — simple shared notebook styles
 - `styles.css` — responsive visual system
 - `src/app.mjs` — controls, image preprocessing, visualizations, and inspection
 - `src/engine.mjs` — testable, deterministic numerical model with inspectable weight and activation traces
@@ -158,7 +166,7 @@ After editing the source, regenerate the offline build with `node build.mjs`.
 
 GitHub Pages is configured to deploy from **main / (root)**. Pushing updates to `main` triggers publication. The `.nojekyll` marker serves the static HTML, CSS, JavaScript modules, and SVG assets without Jekyll processing.
 
-The hosted entry point is `index.html`; `standalone.html` remains available as the self-contained offline version. Run `node build.mjs` after source edits to refresh that offline artifact. Check the repository’s Actions tab for deployment status.
+The hosted entry point is `index.html`; `vision.html` serves the interactive chapter, `moe.html` is the placeholder, and `standalone.html` remains the self-contained offline vision chapter. Run `node build.mjs` after vision source edits to rebuild the offline chapter from `vision.html`. The homepage is not bundled into the offline chapter. Check the repository’s Actions tab for deployment status.
 
 ## Next step toward a full research explainer
 
