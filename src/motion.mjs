@@ -25,9 +25,9 @@ export function createArchitectureMotion(root,getExpanded){
    ? focus===0?query('#image-grid'):focus===1?query('.sequence-item[aria-pressed="true"] .sequence-thumb'):null
    : expanded===0?query('.expanded-image-grid'):expanded===1?query('.pixel-grid'):null;
   if(visible(hero))map.set('encoder-patch',hero);
-  const output=expanded===null&&focus===5?query('.ro-compact-matrix'):expanded===5?query('.ro-output-matrix'):null;
+  const output=expanded===null&&focus===5?(query('.ro-compact-matrix')||query('[data-full-anchor="output-compact"]')):expanded===5?(query('.ro-output-matrix')||query('[data-full-anchor="output-expanded"]')):null;
   if(visible(output))map.set('encoder-output',output);
-  const embedding=expanded===null&&focus===2?query('#embedding-matrix'):expanded===2?query('#expanded-embedding-matrix'):null;
+  const embedding=expanded===null&&focus===2?query('#embedding-matrix'):expanded===2?(query('#expanded-embedding-matrix')||query('[data-full-anchor="embedding-expanded"]')):null;
   if(visible(embedding))map.set('encoder-embedding',embedding);
   return new Map([...map].filter(([,el])=>visible(el)));
  }

@@ -8,7 +8,7 @@ function fixture(model='vit'){
  return {patches,result,s:{model,expanded:6,selected:1,key:2,patch:16,cols:3,rows:2,width:48,height:32,layer:0,head:0,scalar:7,dimension:0}};
 }
 test('the new handoff stage follows encoder Output, not a transformer block',()=>{
- assert.equal(STAGE_NAMES.length,7);assert.equal(STAGE_NAMES[5],'Output');assert.equal(STAGE_NAMES[6],'What next?');
+ assert.equal(STAGE_NAMES.length,7);assert.equal(STAGE_NAMES[5],'Output');assert.equal(STAGE_NAMES[6],'Projector');
 });
 for(const model of ['vit','pixtral']){
  test(`${model}: final output count and token index distinguish CLS from patch states`,()=>{
@@ -20,17 +20,19 @@ for(const model of ['vit','pixtral']){
   const selected=html.match(/data-final-vector="([^"]+)"/)[1].split(',').map(Number);
   assert.deepEqual(selected,finalRepresentation(s,result).selected);assert.match(html,/not class labels or text/);assert.match(html,/data-expand-step="6"/);assert.doesNotMatch(html,/data-projector-vector|data-trace-sum/);
  });
- test(`${model}: both readout path cards are keyboard-accessible model switches`,()=>{
+ test(`${model}: show only the selected readout path and no second model picker`,()=>{
   const {s,result,patches}=fixture(model),html=nextStageMarkup(s,patches,result);
-  assert.match(html,/class="ro-two-paths" role="group" aria-label="Choose the encoder readout path"/);
-  const cards=[...html.matchAll(/<button type="button" class="ro-path ([^"]*)" data-next-model="(vit|pixtral)" aria-pressed="(true|false)" aria-controls="readout-path-content">([\s\S]*?)<\/button>/g)];
-  assert.equal(cards.length,2);
-  for(const [,classes,path,pressed,content] of cards){
-   assert.equal(pressed,String(path===model));assert.equal(classes.includes('is-active'),path===model);
-   assert.match(content,path===model?/Currently viewing/:/Explore this path →/);
-   assert.match(content,path==='pixtral'?/all patches → projector → text decoder/:/final \[CLS\] → class scores/);
-  }
+  assert.match(html,new RegExp(`data-readout-model="${model}"`));
+  assert.equal((html.match(/class="ro-selected-path"/g)||[]).length,1);
   assert.equal((html.match(/id="readout-path-content"/g)||[]).length,1);
+  assert.doesNotMatch(html,/ro-two-paths|data-next-model|ro-switch-path|Explore both paths/);
+  if(model==='pixtral'){
+   assert.match(html,/all patches → projector → text decoder/);assert.match(html,/class="ro-decoder"/);
+   assert.doesNotMatch(html,/CLASSIFICATION ViT|class="ro-cls"|class="ro-classifier"/);
+  }else{
+   assert.match(html,/final \[CLS\] → classifier → class scores/);assert.match(html,/class="ro-cls"/);
+   assert.doesNotMatch(html,/PIXTRAL|class="ro-decoder"|projector → text decoder/);
+  }
  });
  test(`${model}: browsing the handoff does not mutate encoder tensors or selection`,()=>{
   const {s,result,patches}=fixture(model),snapshot=structuredClone(result),selected=s.selected;
@@ -120,4 +122,14 @@ test('output matrix does not truncate large patch grids',()=>{
  const large={...result,final:Array.from({length:192},(_,i)=>result.final[i%result.final.length])};
  const html=outputMatrixMarkup({...s,rows:12,cols:16,selected:191},patches,large);
  assert.equal((html.match(/data-output-value=/g)||[]).length,192*24);assert.match(html,/data-output-patch="191"[^>]*aria-pressed="true" tabindex="0"/);
+});
+
+for(const model of ['vit','pixtral'])test(`${model}: compact preview and output destination do not advertise another path`,()=>{
+ const {s,result,patches}=fixture(model),compact=compactNextMarkup(model),output=outputReadoutMarkup({...s,expanded:5},patches,result);
+ assert.doesNotMatch(compact,/both paths|Need text instead/);
+ if(model==='vit'){
+  assert.doesNotMatch(compact,/decoder|LLM/);assert.match(output,/Follow \[CLS\] into the classification head/);assert.doesNotMatch(output,/into a text decoder/);
+ }else{
+  assert.doesNotMatch(compact,/classifier|Class scores|\[CLS\]/);assert.match(output,/Project these vectors into a text decoder/);assert.doesNotMatch(output,/classification head/);
+ }
 });

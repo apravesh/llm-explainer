@@ -18,9 +18,22 @@ test('MoE is a working chapter with routing controls, disclosure, and a route ho
 });
 test('the complete vision chapter survives as a separate page with back navigation',()=>{
  for(const id of ['explorer','architecture','image-grid','rope-lab','comparison'])assert.match(vision,new RegExp(`id="${id}"`));
- assert.equal((vision.match(/data-stage="\d"/g)||[]).length,7);assert.match(vision,/href="\.\/" aria-label="LLM Explainer home"/);assert.match(vision,/src="src\/app.mjs"/);
+ assert.equal((vision.match(/data-stage="\d"/g)||[]).length,7);assert.match(vision,/href="\.\/" aria-label="LLM Explainer home"/);assert.match(vision,/src="src\/full-app.mjs"/);
 });
 test('offline builder reads the vision page, never the blog homepage',()=>{
  assert.match(build,/readFile\(at\('vision.html'\),'utf8'\)/);assert.doesNotMatch(build,/readFile\(at\('index.html'\)/);
  assert.match(standalone,/id="explorer"/);assert.doesNotMatch(standalone,/class="chapter-list"/);
+});
+
+test('vision chapter and offline bundle initialize Pixtral from the first render',async()=>{
+ const app=await read('src/full-app.mjs');
+ assert.match(app,/const state=\{[^\n]*model:'pixtral'/);
+ for(const html of [vision,standalone]){
+  const switchMarkup=html.match(/class="model-switch"[\s\S]*?<\/div>/)[0];
+  assert.match(switchMarkup,/data-model="pixtral" aria-pressed="true"/);
+  assert.match(switchMarkup,/data-model="vit" aria-pressed="false"/);
+  assert.ok(switchMarkup.indexOf('data-model="pixtral"')<switchMarkup.indexOf('data-model="vit"'));
+  assert.match(html,/id="output-shape">48 × 1,024/);assert.match(html,/id="ffn-title">Gated MLP/);
+ }
+ assert.doesNotMatch(app,/data-next-model|\[CLS\] → classifier; patches/);
 });

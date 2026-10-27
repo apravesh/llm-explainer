@@ -1,3 +1,4 @@
+import {projectorFlowMarkup} from './projector-view.mjs';
 /** Encoder readout is real. Classifiers and autoregressive decoding are schematic. */
 import {DIM,LLM_DIM} from './engine.mjs';
 const rofmt=(x,d=3)=>Number(x).toFixed(d);
@@ -43,7 +44,7 @@ export function decoderPrefix(rows,cols,generated=0){
 }
 export function compactNextMarkup(model){
  return model==='vit'
- ? '<div class="next-compact"><strong>[CLS]</strong><span>one summary vector</span><i>↓</i><strong>Class scores</strong><small>classifier not run</small><div class="next-compact-rule"></div><span>Need text instead?</span><b>Patch vectors → LLM</b><em>Explore both paths +</em></div>'
+ ? '<div class="next-compact"><strong>[CLS]</strong><span>one summary vector</span><i>↓</i><strong>Class scores</strong><small>classifier not run</small><em>Follow the readout +</em></div>'
  : '<div class="next-compact"><strong>All patch vectors</strong><i>↓</i><strong>Project to LLM width</strong><span>+ text embeddings</span><i>↓</i><strong>Causal text decoder</strong><span>next text token</span><small>decoder schematic only</small><em>Follow the handoff +</em></div>';
 }
 export function outputReadoutMarkup(s,patches,result){
@@ -65,7 +66,7 @@ export function outputReadoutMarkup(s,patches,result){
    <p class="ro-copy ro-muted">These activations come from untrained weights, so they do not imply learned visual understanding.</p>
   </div>
  </div>
- <div class="ro-boundary"><div><span>VISION ENCODER ENDS HERE</span><strong>${r.count} × ${DIM} representation</strong></div><b>→</b><button type="button" class="ro-next-link" data-expand-step="6">${r.hasCls?'[CLS], classification, or a text decoder?':'Project these vectors into a text decoder'} <span>What happens next →</span></button></div>
+ <div class="ro-boundary"><div><span>VISION ENCODER ENDS HERE</span><strong>${r.count} × ${DIM} representation</strong></div><b>→</b><button type="button" class="ro-next-link" data-expand-step="6">${r.hasCls?'Follow [CLS] into the classification head':'Project these vectors into a text decoder'} <span>${r.hasCls?'Classification':'Projector'} →</span></button></div>
  <p class="ro-copy ro-muted">The inspected block slider does not change this final output: it is always after all ${result.layers.length} blocks. Full-size encoders use larger hidden widths; this demo uses ${DIM}.</p></section>`;
 }
 function clsExplanation(s,result){
@@ -77,18 +78,18 @@ function clsExplanation(s,result){
  ${readoutVector(steps[chosen][0],steps[chosen][1],`data-cls-vector="${steps[chosen][1].join(',')}"`)}
  <div class="ro-classifier"><span>final [CLS] · 1 × ${DIM}</span><b>→</b><span>classifier head</span><b>→</b><span>class logits → probabilities</span><small>Architecture only · classifier not run</small></div>
  <p class="ro-copy">Classification training makes this token useful as a whole-image summary. It is not an average by definition, and it is not guaranteed to be a meaningful summary in this untrained demo. The other patch states still exist; the classification head simply reads [CLS].</p>
- <div class="ro-switch-path"><strong>This is not the Pixtral text-generation path.</strong><p>A vision-language model typically keeps multiple patch features rather than relying on one [CLS] vector. Pixtral has no [CLS] token.</p><button type="button" data-next-model="pixtral">See patch vectors → text decoder →</button></div></section>`;
+ </section>`;
 }
 function decoderExplanation(s,patches,result){
  const generated=Math.min(Math.max(s.decoderStep||0,0),2),prefix=decoderPrefix(s.rows,s.cols,generated),query=prefix.length-1,nextLabel=['t₁','t₂','t₃'][generated];
  const selected=Math.max(0,s.selected);
  return `<section class="ro-decoder" aria-label="How image vectors enter a text decoder"><div class="ro-section-label">VISION-LANGUAGE PATH · PIXTRAL</div><h4>Keep the patches. Match the decoder’s width.</h4>
  <p class="ro-copy">Pixtral keeps <strong>all ${patches.length} patch vectors</strong>. The same two-layer projector maps each from the encoder width to the language model’s input width. It changes the number of features, not the number of image patches.</p>
- <div class="ro-project-flow"><div><small>ENCODER OUTPUT</small><strong>${patches.length} × ${DIM}</strong><span>continuous patch states</span></div><b>→</b><div><small>PROJECTOR · COMPUTED</small><strong>${DIM} → ${LLM_DIM} → ${LLM_DIM}</strong><span>Linear → GELU → Linear</span></div><b>→</b><div><small>DECODER-READY IMAGE FEATURES</small><strong>${patches.length} × ${LLM_DIM}</strong><span>same patches, new width</span></div></div>
+ ${projectorFlowMarkup(s,patches,result)}
  ${readoutVector(`Projected image feature · p${selected}`,result.projected[selected],`data-projector-vector="${result.projected[selected].join(',')}"`)}
  <button type="button" class="ro-math-button" data-multiply="projector-first" aria-haspopup="dialog">▶ Animate the projector multiplication</button>
  <button type="button" class="ro-math-button" data-projector-detail aria-expanded="${!!s.projectorDetail}" aria-controls="projector-detail">${s.projectorDetail?'− Hide':'+ Inspect'} the projector multiplication</button>
- <p class="ro-copy ro-muted">Teaching dimensions shown above. Pixtral 12B uses encoder width 1,024 and decoder width 5,120; its projector is 1,024 → 5,120 → 5,120.</p>
+ <p class="ro-copy ro-muted">The same learned projector is applied independently to every encoder patch. Open either weight matrix above for its animated multiplication.</p>
  <div class="ro-section-label">ONE JOINT SEQUENCE · IMAGE VECTORS + TEXT EMBEDDINGS</div>
  <p class="ro-copy">Text tokens use the decoder’s embedding lookup. Image slots instead receive the projected continuous image vectors. Both have the same width. Row-break and image-end tokens mark the image’s structure; they are separate from the patch features. <strong>The encoder does not turn the image into words first.</strong></p>
  <div class="ro-stream-caption"><span>ILLUSTRATIVE PREFIX · NOT ACTUAL TEXT TOKENIZATION</span><span>${prefix.filter(t=>t.kind==='image').length} image slots · ${s.rows-1} row breaks · 1 image end</span></div>
@@ -98,10 +99,10 @@ function decoderExplanation(s,patches,result){
  <div class="ro-generation-steps" role="group" aria-label="Illustrative text generation steps">${['1 · Build the prefix','2 · Append t₁','3 · Append t₂'].map((label,i)=>`<button type="button" data-decoder-step="${i}" aria-pressed="${i===generated}">${label}</button>`).join('')}</div>
  <p class="ro-generation-status" aria-live="polite">${generated===0?'The last prompt token T₁ predicts the first answer token t₁.':`The chosen token t${generated===1?'₁':'₂'} is embedded and appended to the prefix; that last position now predicts ${nextLabel}.`} Repeat to generate text. Tokens t₁/t₂/t₃ are placeholders, not model predictions.</p>
  <p class="ro-copy">This differs from an encoder–decoder design with a separate cross-attention module: <strong>Pixtral inserts image features into the causal decoder’s own input sequence</strong>. Image patches were already contextualized by bidirectional vision attention before the decoder sees them. The language decoder then produces text autoregressively.</p>
- <div class="ro-switch-path"><strong>No [CLS] bottleneck here.</strong><p>Each projected patch occupies its own decoder input slot. A single summary token would discard that per-patch interface.</p><button type="button" data-next-model="vit">Compare with the [CLS] classification path →</button></div></section>`;
+ <div class="ro-readout-note"><strong>No [CLS] bottleneck here.</strong><p>Each projected patch occupies its own decoder input slot. A single summary token would discard that per-patch interface.</p></div></section>`;
 }
 export function nextStageMarkup(s,patches,result){
  const isPix=s.model==='pixtral';
- return `<div class="ro-next-stage"><div class="ro-two-paths" role="group" aria-label="Choose the encoder readout path"><button type="button" class="ro-path ${isPix?'':'is-active'}" data-next-model="vit" aria-pressed="${!isPix}" aria-controls="readout-path-content"><span>CLASSIFICATION ViT</span><strong>final [CLS] → class scores</strong><small>A summary readout, not a text decoder</small><span class="ro-path-cue">${isPix?'Explore this path →':'Currently viewing'}</span></button><button type="button" class="ro-path ${isPix?'is-active':''}" data-next-model="pixtral" aria-pressed="${isPix}" aria-controls="readout-path-content"><span>PIXTRAL</span><strong>all patches → projector → text decoder</strong><small>Many image slots, then next-token prediction</small><span class="ro-path-cue">${isPix?'Currently viewing':'Explore this path →'}</span></button></div><div id="readout-path-content">${isPix?decoderExplanation(s,patches,result):clsExplanation(s,result)}</div>
+ return `<div class="ro-next-stage" data-readout-model="${s.model}"><div class="ro-selected-path"><span>${isPix?'PIXTRAL':'CLASSIFICATION ViT'}</span><strong>${isPix?'all patches → projector → text decoder':'final [CLS] → classifier → class scores'}</strong><small>Selected architecture · change it with the model toggle above</small></div><div id="readout-path-content">${isPix?decoderExplanation(s,patches,result):clsExplanation(s,result)}</div>
  <div class="ro-sources"><span>Architecture references</span><a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener">ViT paper ↗</a><a href="https://arxiv.org/abs/2410.07073" target="_blank" rel="noopener">Pixtral paper ↗</a></div></div>`;
 }

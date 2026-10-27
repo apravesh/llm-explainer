@@ -8,8 +8,8 @@ import { dot, DIM, HEAD_DIM } from './engine.mjs';
 const nf=(n,d=3)=>Number(n).toFixed(d);
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tint=(v,scale=1)=>{const t=Math.min(Math.abs(v)/scale,1),a=v>=0?[115,151,217]:[214,155,127];return `rgb(${a.map(x=>Math.round(249+(x-249)*t)).join(',')})`;};
-export const STAGE_NAMES=['Input image','Patches','Embedding','Self-attention','MLP','Output','What next?'];
-const names=STAGE_NAMES;
+export const STAGE_NAMES=['Input image','Patches','Embedding','Self-attention','MLP','Output','Projector'];
+export function stageNames(model){return model==='vit'?[...STAGE_NAMES.slice(0,6),'Classification']:STAGE_NAMES;}
 
 export function projectionTrace(input,weights,dimension){
  if(!input.length||weights.length!==input.length||!Number.isInteger(dimension)||dimension<0||dimension>=weights[0].length)throw Error('Invalid projection trace dimensions');
@@ -85,8 +85,8 @@ function multiplicationView({input,weights,output,scalar,dimension,inputName='x'
 function numberVector(label,values){return `<div class="expanded-vector"><span>${label}</span><div>${values.map((v,i)=>`<span style="background:${tint(v,2)}" title="Dimension ${i}: ${nf(v,6)}">${nf(v,2)}</span>`).join('')}</div>`;}
 
 export function expansionMarkup(s,patches,result,imageURL){
- const step=s.expanded,selected=Math.max(0,s.selected),p=patches[selected],token=s.model==='vit'?s.selected+1:selected,l=result.layers[s.layer],head=l.heads[s.head],isPix=s.model==='pixtral';
- const title=step===1?'Rearrange pixels. Keep every value.':step===2?'One row per token. All embeddings in view.':step===0?'Zoom all the way into the pixels.':step===3?'One image. Multiple attention heads.':step===4?'Inside the feed-forward network.':step===5?'The final output is a matrix of vectors.':'From image representations to a task.';
+ const names=stageNames(s.model),step=s.expanded,selected=Math.max(0,s.selected),p=patches[selected],token=s.model==='vit'?s.selected+1:selected,l=result.layers[s.layer],head=l.heads[s.head],isPix=s.model==='pixtral';
+ const title=step===1?'Rearrange pixels. Keep every value.':step===2?'One row per token. All embeddings in view.':step===0?'Zoom all the way into the pixels.':step===3?'One image. Multiple attention heads.':step===4?'Inside the feed-forward network.':step===5?'The final output is a matrix of vectors.':isPix?'Project image features into the language model.':'Read the classification token.';
  let body='',sub='',controls=`<div class="inspected-token"><span>${step===3?'Query token':'Inspecting'}</span><strong>${s.selected<0?'[CLS]':`p${String(s.selected).padStart(2,'0')} · (${p.row}, ${p.col})`}</strong><small>select from the patch sequence</small></div>`;
  if(step<=2){
   if(s.selected<0){sub='[CLS] is a separate trainable vector, not a projected image patch.';body=`<div class="cls-explanation">${numberVector('Raw [CLS]',result.cls)}${numberVector('+ position',result.positions[0])}${numberVector('Input [CLS]',result.input[0])}<p>Choose a patch from the sequence to inspect pixel projection.</p></div>`;}
@@ -141,5 +141,5 @@ export function expansionMarkup(s,patches,result,imageURL){
   body=embeddingOverviewMarkup(s,patches,result)+`<details id="embedding-arithmetic" class="eb-arithmetic" ${s.embeddingDetail?'open':''}><summary>${s.selected<0?'Inspect the learned CLS vector and position addition':'Inspect pixel projection and input preparation'} <span>exact values & weights</span></summary>${body}</details>`;
  }
 
- return `<div class="expansion-topline"><span class="expansion-breadcrumb">ARCHITECTURE / ${names[step].toUpperCase()}</span><button data-collapse class="collapse-expansion" aria-label="Collapse expanded section">− Collapse</button></div><div class="expansion-workspace">${patchRailMarkup(s,patches,imageURL)}<div class="expansion-inspection"><div class="expansion-intro"><h3>${title}</h3><p>${sub}</p></div><div class="expansion-controls">${controls}<span class="weights-disclosure">${step<=1?'Live pixels · no learned parameters':step===6?'Vectors computed · decoder/classifier schematic':'Live values · untrained weights'}</span></div>${body}<div class="expansion-nav"><button data-expand-step="${step-1}" ${step===0?'disabled':''}>← ${names[step-1]||'Previous'}</button><span>Click another stage to open it in place</span><button data-expand-step="${step+1}" ${step===names.length-1?'disabled':''}>${names[step+1]||'Next'} →</button></div></div></div>`;
+ return `<div class="expansion-topline"><span class="expansion-breadcrumb">ARCHITECTURE / ${names[step].toUpperCase()}</span><button data-collapse class="collapse-expansion" aria-label="Collapse expanded section">− Collapse</button></div><div class="expansion-workspace">${patchRailMarkup(s,patches,imageURL)}<div class="expansion-inspection"><div class="expansion-intro"><h3>${title}</h3><p>${sub}</p></div><div class="expansion-controls">${controls}<span class="weights-disclosure">${step<=1?'Live pixels · no learned parameters':step===6?`Vectors computed · ${isPix?'decoder':'classifier'} schematic`:'Live values · untrained weights'}</span></div>${body}<div class="expansion-nav"><button data-expand-step="${step-1}" ${step===0?'disabled':''}>← ${names[step-1]||'Previous'}</button><span>Click another stage to open it in place</span><button data-expand-step="${step+1}" ${step===names.length-1?'disabled':''}>${names[step+1]||'Next'} →</button></div></div></div>`;
 }
