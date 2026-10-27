@@ -1,221 +1,137 @@
 # LLM Explainer
 
-A growing collection of interactive explanations of language and multimodal model architectures.
+Interactive chapters at `apravesh/llm-explainer`, deployed using GitHub Pages (`main / root`).
 
-Repository: `apravesh/llm-explainer`.
+1. Text transformers (GPT2): links to Polo Club's independent Transformer Explainer.
+2. Vision encoders (Pixtral – Multimodal LLMs): this project's visual explorer.
+3. Mixture of Experts: an untrained minimal sparse FFN with top-1 / top-2 routing.
 
-**Website:** https://apravesh.github.io/llm-explainer/
+## Vision: real dimensions, synthetic weights
 
-The repository is public. GitHub Pages publishes the root of `main` over HTTPS; no external host or custom deployment workflow is required.
+The vision chapter now **executes the full dimensions**, rather than relabeling small tensors. Pixtral is the default; ViT-B/16 remains selectable.
 
-## Current chapter: Vision Encoder Explainer
+| | Pixtral-12B vision path | ViT-B/16 |
+|---|---:|---:|
+| Patch | 16 × 16 RGB (768 inputs) | 16 × 16 RGB (768 inputs) |
+| Hidden features | 1,024 | 768 |
+| Attention heads | 16 × 64 | 12 × 64 |
+| FFN intermediate features | 4,096 | 3,072 |
+| Encoder blocks | 24 | 12 |
+| Position mechanism | 2D RoPE in every attention block | Learned absolute vectors at input |
+| Readout | All patches → projector 1,024 → 5,120 → 5,120 | Final CLS → schematic classifier |
 
-The first chapter explains how image patches become contextual representations in ViT and Pixtral, then connect to a text decoder. It is an independent companion inspired by [Transformer Explainer](https://poloclub.github.io/transformer-explainer/).
+These are architecture dimensions, **not pretrained Pixtral/ViT inference**. Weights are dense deterministic synthetic values generated from a documented integer hash. Biases are omitted; normalization uses identity gains and zero bias. Inputs use the existing demo RGB normalization to [-1,1]. No classifier, vocabulary, tokenizer, or language decoder is executed. No model checkpoint is downloaded.
 
-The root page is a simple learning notebook with three ordered chapter links:
-1. [Polo Club’s Transformer Explainer](https://poloclub.github.io/transformer-explainer/) — external text-transformer guide.
-2. [Vision encoders](https://apravesh.github.io/llm-explainer/vision.html) — this project’s interactive ViT/Pixtral chapter.
-3. [Mixture of Experts](https://apravesh.github.io/llm-explainer/moe.html) — a minimal interactive sparse FFN with top-1/top-2 routing.
+For interactive token counts, images are deliberately resized to **128 pixels on the longer side** with patch-aligned edge padding (Pixtral), or a **96 × 96 center crop** (ViT). This reduces the number of patches, not hidden widths, heads, FFN size, or depth. The default Pixtral bird image has 48 patches. Production image preprocessing/resolution and trained weights are not reproduced.
 
-The existing vision chapter is preserved at `vision.html`, with links back to the homepage. `standalone.html` remains the complete offline vision explainer. The homepage uses lightweight `journal.css` without JavaScript. The MoE chapter uses `moe.css` and two independent JavaScript modules.
+Reference dimensions: Mistral's `Pixtral-12B-2409/params.json` on Hugging Face; projector structure in `mistral-inference/src/mistral_inference/vision_encoder.py`; ViT-B/16 architecture in *An Image Is Worth 16×16 Words*.
 
-## Chapter 03: the simplest useful MoE layer
+## Runtime and performance
 
-`moe.html` runs one **untrained sparse feed-forward sublayer**, not a language model checkpoint. It has eight hidden features, four bias-free expert MLPs (8 → 16 → 8 with GELU), a bias-free router (8 → 4), shared input LayerNorm, and a residual connection. The router and experts use deterministic random weights.
+- A **Web Worker** computes every block in order. Later blocks depend on actual preceding outputs; none are skipped. Embeddings, completed blocks, final output, and projector results are streamed to the page.
+- **WebGPU** is attempted first, with an independent numerical self-check. It generates a dense weight buffer and runs tiled FP32 matrix multiplication. Device/validation failures are reported; CPU retry is available.
+- **WebAssembly SIMD** is the CPU fallback, with a plain worker JavaScript fallback when SIMD is unavailable. The 385-byte SIMD kernel is embedded in source and the offline build. It uses full dense dot products, not low-rank/sparse approximations.
+- Full weights are materialized **one operation at a time** in the worker; UI inspectors regenerate individual weights from descriptors. The UI does not hold 400+ million boxed JavaScript weight values or millions of DOM cells.
+- Activations are retained for block/patch/head inspection. Completed runs are cached with a maximum of two entries. Image/model changes terminate stale workers; cancel retains partial results without fabricating output.
+- UI remains responsive during computation. A progress/status strip shows the selected backend, completion time, cancel/retry, and a CPU recomputation option.
 
-- **Top-1 by default:** select one expert. The default selected-normalized gate is exactly 1. Top-2 shows a genuine weighted mixture of two outputs.
-- **Router inspector:** actual hidden state × router weights, logits, softmax probabilities, selected experts, and gates. Choose selected-normalized weights or retained full-softmax probabilities. This deliberate convention choice is disclosed; the demo is not an exact implementation of Switch or Mixtral.
-- **Expert inspector:** inspect both actual matrix multiplications of any active expert. Unselected experts are not evaluated and show “Not run” instead of fabricated activations.
-- **Token context:** a selectable token column stays beside the flow. Example labels are whitespace-separated (maximum 12). Synthetic hidden states are seeded by label and position; no pretrained tokenization, embedding, or attention is run. Edit the eight input values to see routing change.
-- **Combination and output:** sum gate × expert output, then add the original input. Expert outputs are added, not concatenated. No text is generated.
-- **Batch view:** token-to-expert assignments and load counts update with all controls. Top-2 gives twice as many assignments as tokens. No capacity limit, dropped tokens, distributed dispatch, load balancing, training, or semantic specialization is simulated.
-- **Dense comparison:** use expert 1 as one standalone same-width MLP, bypassing the router. It is not an equal-total-parameter comparison. Stored weights and linear MACs make the distinction explicit: dense 256; sparse top-1 1,056 stored / 288 active MACs; top-2 544 MACs.
-- **Animation:** trace input → router → selected experts → mixture → residual. It is cancellable and disabled for reduced motion. The diagram stays visible while any detailed inspector is open.
+Local benchmark on the development machine for 48 patches: approximately **1–1.2 seconds WebGPU**, **4.7 seconds Node WebAssembly SIMD**, through all 24 Pixtral blocks and both projector layers. These are measured examples, not device-independent guarantees. Browser CPU performance, device memory, and available GPU support vary.
 
-References: [Switch Transformer](https://www.jmlr.org/papers/v23/21-0998.html), [Sparsely-gated MoE](https://arxiv.org/abs/1701.06538), and [Mixtral of Experts](https://arxiv.org/abs/2401.04088).
+## Matrices that remain readable
 
-## Open instantly
+The overview and expanded stages retain full tensor extents and correct dimensions. Dense activations are painted on canvas. When several features share a pixel, their mean is shown and labeled **pooled overview**. Large weight previews are explicitly **sampled weight overviews**. These display summaries never change the underlying computation.
 
-Double-click **`standalone.html`**. It is a self-contained offline build with embedded styles, JavaScript, and sample artwork. No server or installation is required for this file.
+Exact numeric inspectors show **32 features at a time**, labeled e.g. `features 5088–5119 of 5,120`. Previous/next controls and direct index entry (press Enter) reach every feature. Hover gives the value at the indicated actual coordinate. Attention heads are displayed as a **stack with one selected head at the front**, rather than a grid of 16 matrices. Previous/next buttons and compact numbered selectors reach all 16 Pixtral / 12 ViT heads. Arrow keys wrap between heads; Home/End jump to the first/last. The selected head is shown as one connected Q/K/V calculation on the front card, rather than a separate preview followed by a dashboard. The brief card-change animation respects reduced motion. All heads still compute in parallel; stacking changes only the presentation. Each retains its full 64-feature dimension.
 
-## Run the modular source
+Expanded stages use the same heading toggle: **+** opens the stage and **−** closes it. There is no second stage-level Collapse button; Escape also returns to the overview.
 
-Requires Node.js 20 or newer. No dependencies, package installation, API keys, or model downloads.
+The expanded matrix views keep a complete selectable patch rail. Matrix clicks and keyboard arrows select tokens and features. MLP diagrams connect corresponding token rows and explicitly show shared weights. The Projector keeps input, intermediate, activated, and output matrices; ViT instead shows Classification.
+
+### Focused attention window
+
+Expanded Self-attention shows **six query rows and six key columns at a time** around a magnified **6 × 6 attention-weight grid**. Q/K/V retain all real head features; the output preview displays eight real feature columns at a time. On desktop, the patch list starts level with the attention grid instead of the section heading; this alignment adapts to layout changes. On mobile the horizontal strip stays above the diagram. Scrolling the complete left patch pane pans the inspection window; it does not change the selected query, rerun the encoder, or rebuild the pane. Previous/next-window controls, a full-matrix minimap, and “Follow query” provide alternative navigation. A few faint context cells and explicit omitted-token counts represent the parts outside the magnified view; the minimap shades every region outside the current query/key crop.
+
+Click an attention cell (or **Attention +**) to unfold that same six-token view into **Dot product → Scaling · Mask → Softmax**. Three panels spread apart with a short animation; Replay repeats it and Collapse returns to the simple flow. The dot-product panel sums all 64 head features, scaling divides by √64 = 8, and softmax normalizes across the complete token row. Each panel has its own labeled color range and a stage-specific value tooltip. The selected query/key is highlighted across all three panels, with its numeric formula below.
+
+The mask defaults to **none**, because this is a vision encoder. **Compare decoder mask** is optional: future-key scores become −∞, their weights become 0, and the displayed head output/value-mixing loop uses the corresponding comparison weights. This never changes the encoder tensors, subsequent blocks, or projector results. Comparison banners make the boundary explicit. Collapse restores the unmasked encoder view, and changing models clears comparison mode. Float64 inspected dot products may differ slightly from the stored FP32 scaling/softmax values; the selected arithmetic discloses this.
+
+Query and Key have **independent scroll windows**: scroll over a pane or drag its scrollbar, with keyboard arrows / Page Up / Page Down / Home / End available. Query moves attention rows and the matching output rows; Key moves attention columns and the matching V rows. The main patch rail and paired paging arrows can still move both windows together. The minimap shows the rectangular query/key crop, including off-diagonal windows.
+
+The mixing operation is labeled **Attention_weights × V**, with weights identified as softmax probabilities. Its result is shown immediately to its right as a **6-row × 8-feature output snippet**. Vertical output scrolling stays linked to Query; horizontal scrolling reaches all 64 head features. The bottom labels distinguish the visible snippet from the full `N × 64` head output. Hovering a snippet cell shows the actual stored value. These are full weighted sums over all keys, never sums over only the visible key window.
+
+This is a display crop, **not local/windowed attention**. Each circle retains its original full-row softmax probability. The crop is never re-normalized. A visible-mass note reports the selected query's attention assigned to shown keys vs. off-window keys. The output strips and automatic value-mixing loop still include **every token**. Grey context means out of view, not a causal mask. ViT includes CLS as its own token; Pixtral has no CLS.
+
+Hovering or keyboard-focusing an attention cell immediately shows its query/key labels, percentage, and full-precision stored weight in a tooltip; the value comes from the full attention row, not a renormalized crop. Hovering does not select a different pair. The tooltip clears when the window scrolls, focus leaves, or the view changes. Selecting a cell or Q/K/V row updates the same query/key pair and exact optional inspectors. Switching head/block retains both viewed patch ranges; selecting a query or key outside its window recenters only that axis. Scroll rendering updates only the focused diagram so the patch pane and value-mixing loop do not jump or restart. The matrix retains all token rows and head features in memory. The rest of the architecture's matrices are unchanged.
+
+Projection titles open full-dimensional multiplication overlays. Numerical feature tables, selected-score/softmax arithmetic, position details, residual output, and decoder-mask comparison stay collapsed by default. Q/K displayed here already include Pixtral's rotary positions; the projection overlay is explicitly pre-RoPE. The Q and K wires meet at the grid; V travels separately to the mixing operation, and the outputs continue on the right.
+
+Value mixing **loops automatically** over all keys while the attention view is open; there is no play button. It pauses for hidden tabs/dialogs and respects reduced motion. It never changes the selected query/key or weights. The numeric output is explicitly a partial sum until the loop completes, and repeated frames are not announced by screen readers.
+
+### Readable patch rows
+
+Activation matrices retain their full dimensions, but now draw a horizontal guide for every token row (with a stronger guide every fourth row). A side ruler shows patch labels and always identifies the selected patch. Labels are spaced for legibility; the matrix still contains every row. ViT separately labels CLS and reports “36 patches + CLS.” Weight matrices are not labeled as patches: their rows are input features. Very dense token grids thin only visual guides, which the caption discloses.
+
+### Move through all transformer blocks
+
+Use the **small previous/next arrows on the transformer block itself** to browse Pixtral’s 24 blocks or ViT-B/16’s 12 blocks. The same inline arrows appear alongside the heading when Self-attention or MLP is expanded. There is no separate “Encoder Depth” bar or top block slider.
+
+Self-attention and MLP update together with a short transition. The selected patch, head, feature ranges, and expanded attention/MLP view are preserved. Arrows disable at the first/last block or when the neighboring block has not finished computing. Keyboard arrows and Home/End also work while an inline block control is focused. Reduced-motion preferences skip the transition. Final encoder Output/Projector tensors remain the final result, not the inspected intermediate block.
+
+Click either compact **MLP input or activated matrix** to expand the inspected MLP block, without changing the selected patch or transformer block. Enter/Space work too. The two small multiplication buttons between those matrices still open their own arithmetic overlays.
+
+### Multiplication overlays
+
+Click an **existing curved connection from a patch to its embedding** to open that patch’s projection overlay directly, without expanding a stage. Hovering or focusing any connection brightens the entire group, making the projection step feel like one clickable area; there is no extra ×W button. Transparent hit areas split the space between neighboring curves, making thin lines easier to click without changing their appearance or letting one connection cover another. Arrow keys browse the visible connections; Enter/Space opens the focused patch’s math. Connections appear once projection results are ready and never represent CLS as a projected patch. The shortcuts inside Patches/Embedding remain available.
+
+Click patch projection, Q/K/V projection, MLP Expansion/Gate/Contraction, attention output projection, or either projector matrix to inspect **X × W = Y** with all actual dimensions. The complete output matrix stays present. Select a row/column, pause/play, step a term, scrub included terms, inspect exact weights, or page the selected output vector.
+
+The runtime tensors use Float32. For numerical inspection, dot products accumulate the same weights in Float64. The UI explicitly reports their difference (rounding / accumulation order) rather than claiming bitwise equality. All terms are included; animation ticks may include a labeled group of terms. Multiplication playback uses a fixed **fast 2.4-second** duration for a full dot product. There is no speed selector; pause, step, replay, and the term slider remain available. Time-based playback reveals a larger prefix of the exact same sum; it never omits terms. Reduced motion shows completed results and retains manual inspection. Background tabs pause animations.
+
+### Projector GELU overlay
+
+Click **GELU → Explore** between the projector’s linear layers. The overlay keeps the full pre/post activation matrices visible, highlights the selected patch and feature, and plots its scalar transformation with a replayable trace. Patch/feature inputs and matrix clicks inspect the real stored FP32 tensors; a nearby-feature cutaway compares exact before/after values.
+
+The explanation distinguishes exact GELU (`x Φ(x)`) from the runtime’s tanh approximation, which is shared by the compute engine and inspector. A separate slider and example buttons explore positive, zero, and negative inputs without changing any model values. GELU is elementwise: dimensions and patch identities remain unchanged. Escape/close restores focus to the trigger; hidden tabs and reduced-motion preferences suppress animation.
+
+### Walkthrough and positional lab
+
+**Follow a patch** plays through seven stages with pause/resume, previous/next, stage buttons, and replay. It uses cached real-size results; the schematic classifier/decoder boundary is disclosed. Opening another stage or changing the input stops the tour. The separate positional lab uses **four fixed toy features** (two pairs), so every term is visible. Its 30°/15° angular increments are teaching choices, not the encoder’s frequency schedule. The compact main lab shows **one query patch in one circle**, with blue row-pair and purple column-pair arrows (two separate feature pairs, not sequential rotations). The main rotation loops automatically while its circle is in view: **2.6 seconds to rotate, hold the complete result for 2 seconds, then restart**. Row/column edits restart the loop. There are no main-page playback buttons or scrubber; manual playback controls remain only in the math overlay. Scrolling away, hiding the tab, or opening an overlay pauses the loop and preserves the remaining rotation/hold time. Reduced motion shows the final result without looping. Positions are no longer capped at 7: the old bound came from a toy 8×8 grid, not RoPE. Inputs accept non-negative safe integers, and full revolutions are omitted only from the arc drawing to keep large indices cheap to render; the numerical angles and endpoints retain the actual calculation. Pair readouts separate full turns from the remaining angle. A compact disclosure explains why 361° and 1° produce identical final vectors, why rotation does not encode the turn count, and why angle periodicity must not be confused with a universal period in position indices. It explicitly notes that positions 1 and 361 happen to collide with this toy’s 30°/15° speeds. Row/column inputs remain available on the main page; scrubbing is available in the math overlay. **See the math** opens an overlay combining numerical 2×2 rotation matrices with the four-term attention dot product. **Why move two patches together?** opens a separate Q/K comparison overlay with shared-position shifts and a move-only-K contrast. This overlay animates once when opened and stays on the completed result, with no loop, timing captions, playback buttons, or scrubber. Closing and reopening replays from the start. Coordinate edits and move buttons each animate their new calculation once; move buttons remain enabled after completion. Visibility changes resume an unfinished animation but never restart a completed one. Per-pair explanations distinguish the shared frequency (degrees per row/column), the position-dependent added angle, and the vectors’ different starting directions. Each overlay copies the main example into isolated state; closing preserves the main view and restores focus. This does not change the real encoder’s 64-feature heads.
+
+## MoE chapter
+
+The MoE chapter is intentionally still a small teaching model, separate from the full-size vision engine: eight input features, four 8 → 16 → 8 GELU experts, an 8 → 4 router, top-1/top-2 routing, shared input LayerNorm, and a residual connection. Only selected experts run. The UI exposes gates, exact weighted mixtures, a dense comparison, load counts, and animations. It is not pretrained language-model inference.
+
+## Run, test, build
+
+No runtime dependencies or API keys. Node.js 20+ for local tooling:
 
 ```sh
 node server.mjs
+node --no-maglev --test tests/*.test.mjs
+node build.mjs
 ```
 
-Open `http://127.0.0.1:4173`. Set `PORT=8080` to choose another port. The server binds to loopback only.
+The server binds only to loopback on port 4173 (`PORT` overrides it). `vision.html` loads `src/full-app.mjs`. `standalone.html` is the fully offline, double-clickable vision chapter, including sample SVGs, all scripts, the identical worker, and the SIMD kernel. `build.mjs` builds from the vision page, never the homepage. The `--no-maglev` test flag avoids a concurrent JIT/GC hang observed with the locally installed Node 23.7; it is not required in browsers.
 
-Alternatively, serve this directory with any static HTTP server. Use an HTTP server rather than opening `index.html` as a `file://` URL, because the application uses JavaScript modules.
+Tests include the independent reference-model numerical tests, SIMD kernels vs Float64 dot products, normalization/RoPE/attention, dense dependency ordering, cancellation, exact feature windows, bounded canvas summaries, offline syntax, and a **real 48-patch, 24-block, 1,024-wide Pixtral integration run including the 5,120-wide projector**.
 
-## Full-width diagram
+## Active vision implementation
 
-The interactive architecture and its expanded stages use the full available page width, without the reading column’s width cap. The introduction and explanatory sections remain centered at a readable width. The layout uses page-width grid tracks rather than viewport-width overflow tricks, so it also fits narrow screens and pages with a scrollbar.
+- `src/full-config.mjs`: canonical dimensions, weight hash/descriptors, matrices and views.
+- `src/full-backend.mjs`: validated WebGPU and CPU/SIMD matrix multiplication.
+- `src/wasm-kernel.mjs`, `runtime/matmul.wat`, `runtime/matmul.wasm`: embedded SIMD kernel and auditable source/binary.
+- `src/full-engine.mjs`, `src/full-worker.mjs`: full-size dense forward pass and streamed results.
+- `src/full-matrix.mjs`, `src/matrix-row-guides.mjs`: bounded canvas overviews, patch row guides/rulers, exact coordinate values and feature paging.
+- `src/full-operations.mjs`, `src/full-overlay.mjs`: inspectable operations and animated dot products.
+- `src/block-navigation.mjs`: inline block-arrow navigation and cancellable, reduced-motion-aware transitions. Timing/handoff helpers remain available to reference tests but no longer add a toolbar to the page.
+- `src/attention-window.mjs`: six-token display window, minimap, exact full-matrix weights, and disposable patch-scroll observation.
+- `src/head-stack.mjs`, `src/full-views.mjs`, `src/full-app.mjs`: stacked-head presentation, model UI, matrix flows, patch selection, loading lifecycle and tour.
+- `src/motion.mjs`: in-place stage zoom with native transitions and fallback.
 
-## Persistent patch sequence
+The earlier `engine.mjs`, `app.mjs`, and related small-model view modules remain as reference fixtures for numerical/regression tests. **They are not imported by the active vision entry point or included in the offline application.** Their 24-feature tensors are not used as stand-ins for real dimensions.
 
-Every expanded stage retains the **complete patch sequence** next to its computation. The left-hand column shows actual patch thumbnails, indices, and grid coordinates; scroll to reach every patch. Click a thumbnail to inspect its pixels, projection, attention, MLP, or readout without leaving the stage. On phones this becomes a horizontal strip to leave room for the numerical explanation.
+## Deployment and attribution
 
-Selection carries across stages, and the column retains its scroll position when inspecting a pixel or weight. Arrow keys select adjacent patches; Home/End jump to the first/last token. ViT adds a selectable [CLS] entry from Embedding onward; Pixtral has only patch entries. The thumbnails identify source patches even when the displayed computation uses deeper hidden states.
+GitHub Pages serves `main / root`, with `.nojekyll`, no external hosting. `index.html` and the MoE chapter remain separate. Rebuild the offline file after edits, run tests, and publish all new full-runtime modules together with HTML/styles; then verify the Pages deployment.
 
-## Expand the architecture in place
-
-Click the **+** beside any stage, or click an image patch, to unfold the computation *inside the architecture*. Neighboring stages stay visible as navigation. Click the same heading, **Collapse**, or press **Escape** to restore the overview.
-
-- **Input:** choose a patch in the image, zoom into its individual pixels, and read RGB channel values.
-- **Patches:** a literal pixel grid and a row-major RGB sequence. Select a pixel/channel to trace its flattened index, original channel value, and fixed normalization. There are no learned weights or hidden dimensions in this stage. One patch becomes one input vector, not one token per pixel value.
-- **Embedding:** the flattened inputs multiplied by an inspectable slice of the actual shared projection weights, producing all 24 hidden dimensions. Then inspect the exact position addition (ViT) or input RMS normalization (Pixtral). Patch and channel selection carry over from Patches. [CLS] is treated separately, never as a projected patch.
-- **Self-attention:** a connected Q/K/V → scaled scores → softmax → weighted-value-sum diagram. All three projections and both matrices stay visible. Click a node to open its precise arithmetic below the flow; choose a query from the patch column and a key from either matrix or the key strip. Pixtral visibly inserts 2D RoPE on the Q/K paths, never on V.
-- **MLP:** inspect expansion, gating (Pixtral), contraction, activation, and the residual update.
-- **Output:** inspect the final encoder matrix: one 24-dimensional vector per patch, plus [CLS] for ViT. This is not class logits or generated text.
-- **What next?:** follow ViT’s learned [CLS] state into a classification head, or Pixtral’s patch vectors through the projector into a joint image/text decoder sequence. The projector arithmetic moved here so the vision encoder’s output is clearly separated from the language-model interface.
-
-The displayed weight matrix is a labeled cutaway: nine input rows and four output columns. Omitted rows are marked, and **the sum always includes every input**, not only the displayed slice. Changing the selected output moves the column window. Pixel selection has arrow-key navigation and numeric row/column alternatives.
-
-### Zoom transitions
-
-Expansion now uses a spatial zoom rather than a simple appearance change. The stage grows into the detail view, headings move to their new positions, and the selected patch travels from its thumbnail to the pixel grid. Collapse reverses that journey. Timing is deliberately paced: 1.05 seconds to open, 0.85 seconds to close, and 0.75 seconds to switch stages. Switching expanded stages animates between them without changing the selected model or patch.
-
-The preferred path uses native same-document View Transitions. A geometric Web Animations fallback handles browsers without that API. Reduced-motion preferences skip the animation entirely. Repeated clicks, Escape, resize, and edits settle the current transition safely instead of queueing stale state updates. Ordinary pixel/weight inspections do not replay the zoom.
-
-## Encoder output, [CLS], and the text-decoder handoff
-
-A seventh **“What next?”** stage sits immediately to the right of Output on desktop (below it on narrow screens). Output now ends explicitly at the encoder boundary; Next explains the task-specific readout.
-
-- **ViT classification:** [CLS] is a trainable vector prepended before the patches, not a patch or a label. A selector shows its actual starting vector, input after positional addition, each block’s state, and final normalized state. A classifier would read that last state; no classifier is executed here. It is trained to serve as a summary in a real model, not guaranteed to summarize anything in this untrained demo.
-- **Pixtral:** all patch vectors are kept, with no [CLS]. The actual teaching projector maps each 24D vector to 32D. Both matrix multiplications remain inspectable. The full-size 12B model’s corresponding widths are 1,024 → 5,120 → 5,120.
-- **Decoder interface:** projected image features occupy their own input slots alongside text embeddings of the same width, with row-break and image-end tokens. Pixtral uses a causal decoder over this combined sequence rather than a separate encoder–decoder cross-attention module.
-- **Symbolic generation walkthrough:** T₀ and T₁ stand for illustrative prompt slots, not actual tokenizer output. The last prefix position predicts t₁; after that token is appended, the next pass predicts t₂, and so on. These are placeholders; no tokenizer, decoder, vocabulary logits, sampling, or text generation is run.
-- Switching paths updates the selected model. Clicking an image slot selects that patch and updates its actual projected vector. Generated-step controls never modify the image vectors or the encoder result.
-
-## Follow a patch playback
-
-The **Follow a patch** play button starts an actual seven-stage animated walkthrough in the overview, rather than opening a static expanded panel. The selected patch is highlighted as its RGB pixels are scanned, channels flattened, embedding dot product accumulated, attention values mixed, MLP expansion / activation / contraction / residual processed, and final encoder row followed to the appropriate readout. Numeric frames use the existing deterministic encoder tensors; the classifier or decoder handoff is explicitly symbolic.
-
-The playback bar includes Pause/Resume, Previous/Next, per-stage buttons, Replay, and Close. All seven stages advance automatically; completion offers replay. Manual diagram interactions or model/input changes end the tour rather than fighting the user, background tabs pause, Escape exits, and reduced motion shows static completed frames with manual stage navigation. The same patch and inspected block/head are retained. Starting from CLS chooses patch 0, since this walkthrough follows an image patch.
-
-## Animated multiplication cutaways
-
-Click **MLP Expansion**, **Contraction**, or any per-token MLP vector to open a floating calculation without changing the architecture's zoom level. Embedding matrices (click / Enter) and the Pixtral projector also open this view. The full expanded stages and their static numeric inspectors remain available.
-
-- The overlay uses the exact live input, shared weight matrix, and **complete output matrix** from the teaching encoder. The equation shows X (N × input width) × W (input width × output width) = Y (N × output width). The selected input row is displayed vertically for its dot-product cutaway; every output token and feature stays visible to the right. Click a result cell or use arrow keys to select its patch and output feature; the same feature is highlighted in the weight column and numeric output row below. Full result colors stay visible while the running sum is explicitly labeled partial. A highlighted input row and weight column animate into the running dot-product sum. Click a weight cell or output feature to inspect it; Arrow keys work on the weight matrix.
-- Play/Pause, Step +1, the term slider, Reset, and Sweep this row allow different levels of detail. Long RGB vectors advance in explicitly labeled groups while retaining every term; the slider and single-step control inspect individual terms.
-- All patches (plus ViT's CLS for MLP operations) stay selectable in the overlay. Switching patches resets the partial sum, updates the diagram underneath, and never changes the zoom level. Escape, Close, or the backdrop return to the diagram with focus restored. Background tabs pause; reduced-motion users get immediate results and can still step manually.
-- The overview retains every patch in a scrolling sequence. Curved connections link visible patches to their embedding rows. MLP lanes link each normalized token to its own wider activated vector and contraction result. **The computations are independent, not the weights:** every token shares the same W₁, W₂, and (for Pixtral) W₃ within a block.
-- The MLP expansion overlay ends *before* GELU / SiLU gating; contraction ends *before* residual addition. Captions identify these boundaries. Colors are for signed values, not attention probabilities. Displayed numbers are rounded but accumulation uses full precision.
-
-## Full embedding matrix
-
-The expanded Embedding stage retains the complete colored **block-1 input matrix**, not just one patch's projection calculation. It uses the same `result.input` tensor and signed color scale as the compact embedding canvas. ViT rows already include learned position embeddings (including the leading CLS row); Pixtral rows already include RMSNorm. The raw projection shown by the multiplication overlay is explicitly distinguished from these prepared inputs.
-
-Click a matrix row or a token in the patch rail to select the same row, matching numeric vector, and calculation. Arrow keys / Home / End cover every row, including CLS. Matrix scroll position and the static calculation's open state survive selection changes. The full pixel/weight calculation is available in the disclosure below; the animation opens directly from the selected-row card. Zooming gives the compact and enlarged matrix a shared animation identity. The inspected block/head controls do not change this pre-attention input matrix.
-
-## Full output matrix
-
-The compact Output preview and expanded Output stage render the same complete final encoder matrix, with the same signed activation colors. Every patch row and all 24 features remain present; ViT includes a leading [CLS] row. Larger grids scroll rather than omitting rows.
-
-Click a matrix row or a patch in the left sequence to inspect its vector; both selections stay synchronized. The numeric detail keeps the same cell colors. Arrow keys and Home/End move between rows, including [CLS], and preserve the matrix scroll position. Hover a cell for its precise value. This remains the output after all encoder blocks, regardless of the inspected-block slider. The matrix also has a shared identity in the zoom animation.
-
-## Multi-head attention overview
-
-Self-attention opens with **all three teaching-model heads side by side**. Projected Q/K/V features are split into three color-coded groups of eight. Each head shows its complete N × 8 Q, K, and V matrices, an N × N attention preview, and the selected query’s eight-value output. Every head sees all tokens and projects from all 24 input features; it is not assigned a subset of patches or input features.
-
-Click a head to reveal its existing connected attention flow below the overview, without hiding the other head previews or patch column. “Back to all heads” closes only that detail. Head cards and feature-group buttons select the head directly; the attention matrices and key strip select the query/key pair. Redundant Key and Head dropdowns are intentionally omitted.
-
-The lower flow concatenates the three outputs **in head order** (8 + 8 + 8 = 24), applies the actual 24 × 24 output projection Wₒ, and adds the original input residual. It does not average the heads. Click Wₒ to inspect that numerical multiplication. “Animate concatenation” moves each head’s actual output into its matching slot; it respects reduced motion and cleans up on stop, resize, or navigation.
-
-**Dimension distinction:** the feature dimension gets smaller per head. The N × N attention matrices retain the same token dimensions and are only *drawn* smaller. Attention preview intensity is normalized within each head. Full-size ViT-B/16 has 12 heads × 64 dimensions; Pixtral-ViT (12B) has 16 × 64. The executable model here intentionally remains 3 × 8.
-
-## Connected attention and encoder/decoder comparison
-
-Expanding a head keeps the familiar text-transformer flow in view rather than replacing it with Q/K/V tabs. Blue queries and orange keys meet at the score matrix; green values bypass the score calculation and feed the weighted sum. The selected query row and key cell are linked across the matrices.
-
-- **Encoder is the default:** dense bidirectional attention, with a persistent “no causal mask” callout.
-- **Compare with decoder masking:** the same original Q/K/V are reused, future sequence positions are blocked, and allowed weights renormalize. This is a counterfactual for all heads in the inspected attention block, **not** another model run; the merge preview uses the comparison outputs, but the actual encoder, later blocks, MLPs, and final readouts are unchanged. For ViT, the prepended [CLS] is included in that comparison ordering.
-- **Animate value mixing:** each key’s weighted V vector is added to an explicitly labeled partial sum, ending at the exact full head output. Stop, stage changes, new inputs, and reduced-motion settings are handled without stale animation updates.
-- **Deeper arithmetic:** click Q, K, V, the score matrix title, Softmax, or Weighted sum to inspect the corresponding calculation below the diagram. Q/K/V inspectors retain the actual projection-matrix cutaway.
-- **Pixtral:** inspect before/after rotated queries and keys. The text distinguishes “no causal mask” from the block-diagonal boundary mask used for packed images.
-
-The comparison does not train or identify semantic roles in these untrained heads. The two matrices have different color scales: signed scaled dot products versus nonnegative softmax weights. Keyboard arrows on either matrix change the selected query/key pair.
-
-## Explore
-
-- **Choose an image:** three original SVG illustrations, or a local raster image (PNG, JPEG, WebP, GIF, AVIF; up to 20 MB). Images never leave the device. Animated formats use a decoded frame, not video inference.
-- **Follow a patch:** click image patches or sequence thumbnails, or use the seven stage headings and previous/next controls.
-- **Change the architecture:** ViT uses a teaching-sized fixed square crop, input position vectors, [CLS], LayerNorm, and a GELU MLP. Pixtral uses aspect-preserving resizing/edge padding, RMSNorm, per-layer 2D RoPE, a gated FFN, and a two-layer projector.
-- **Inspect attention:** switch blocks and heads; click the attention matrix to select a query/key pair. Expand the numerical inspector for Q, K, V, coordinate-wise products, the scaled dot product, and the normalized weight.
-- **Change patch size:** actual RGB patchification and projection recompute with 16, 24, or 32 pixel patches.
-- **Try 2D RoPE:** compare 1D/2D rotations, change coordinates and frequencies, and shift both positions to verify the relative-position identity.
-- **Compare the full architectures:** the lower comparison uses ViT-B/16 and the original Pixtral 12B encoder, separately from the small teaching model.
-
-## What is real—and what is illustrative
-
-All displayed encoder activations, attention scores, softmax weights, FFN updates, and projector values are computed locally from the current image. There are no canned or randomly regenerated attention maps.
-
-**The model is deliberately untrained.** Parameters are deterministic seeded random weights, not pretrained ViT/Pixtral checkpoints. It has 4 blocks, hidden width 24, 3 heads (8 dimensions per head), FFN width 48, and a 32-dimensional teaching language-model interface. There are no meaningful classifications, learned head roles, or text generation. The vision-to-language stream and packing-mask diagram illustrate the architecture; an actual LLM and multi-image batching are not executed.
-
-The RoPE lab is a separate mathematical experiment with fixed 8D Q/K vectors, four frequency pairs, base 10,000, and adjustable frequency scale. It shows two of the four pair planes. The score sums all four pair contributions without attention scaling or softmax. It uses the paper's alternating row/column pair convention; implementations can arrange those subspaces differently.
-
-Full-model details are sourced from:
-
-- [An Image Is Worth 16×16 Words](https://arxiv.org/abs/2010.11929)
-- [Pixtral 12B](https://arxiv.org/abs/2410.07073)
-- [RoFormer](https://arxiv.org/abs/2104.09864)
-- [Mistral's reference inference implementation](https://github.com/mistralai/mistral-inference)
-
-This is an original implementation, inspired by the exploration pattern of the Polo Club's Transformer Explainer. It does not copy its source code or assets and is not affiliated with Georgia Tech, the Polo Club, or Mistral AI. Sample artwork is original SVG code included here.
-
-## Test
-
-```sh
-node --test tests/*.test.mjs
-```
-
-The numerical suite covers deterministic parameters, pixel ordering, patch alignment, stable softmax, bidirectional attention, normalization, residual identities, shape contracts, image-sensitive results, RoPE norm preservation, independent 2D axes, relative-position invariance, and fresh RoPE in every Pixtral-style layer.
-
-Manual browser checks cover in-place expansion/collapse, pixels and channels, output-column selection, [CLS], model/image/patch controls, head/block changes, patch and matrix selection, the numerical inspector, RoPE translation invariance, the about dialog, and responsive layouts down to 320 px.
-
-## Files
-
-- `index.html` — learning homepage and the ordered chapter links
-- `vision.html` — interactive vision chapter structure and educational content
-- `moe.html` — interactive mixture-of-experts chapter
-- `moe.css` — MoE diagram and responsive inspection layout
-- `src/moe-engine.mjs` — deterministic sparse router, selected-only experts, combination, dense baseline, and counts
-- `src/moe-app.mjs` — MoE controls, animations, routing maps, and numerical inspectors
-- `journal.css` — simple notebook homepage styles
-- `styles.css` — responsive visual system
-- `src/app.mjs` — controls, image preprocessing, visualizations, and inspection
-- `src/engine.mjs` — testable, deterministic numerical model with inspectable weight and activation traces
-- `src/expansion.mjs` — stage cutaways, pixel inspection, and live matrix-product traces
-- `src/motion.mjs` — interruptible spatial zoom, fallback, and reduced-motion handling
-- `src/attention-flow.mjs` — connected single-head detail, causal comparison, and cancellable value-mixing animation
-- `src/multi-head.mjs` — multi-head previews, feature splits, output concatenation, projection/residual, and merge animation
-- `src/readout.mjs` — final encoder states, CLS trajectory, projector handoff, and symbolic decoder prefix
-- `assets/` — original sample illustrations and icon
-- `tests/engine.test.mjs` — numerical correctness tests
-- `tests/bundle.test.mjs` — offline build syntax and dependency checks
-- `tests/expansion.test.mjs` — cutaway, RGB indexing, and all-stage numerical trace tests
-- `tests/motion.test.mjs` — geometry, transition lifecycles, interruptions, fallbacks, and reduced-motion tests
-- `tests/attention-flow.test.mjs` — causal normalization, output equivalence, immutable encoder data, partial sums, and attention detail tests
-- `tests/multi-head.test.mjs` — feature-split shapes, full-input projections, head order, exact merge/residual identities, and immutable comparisons
-- `tests/readout.test.mjs` — seven-stage navigation, final-vector identities, CLS trajectory, patch ordering and delimiters, projector traces, and immutable symbolic generation
-- `tests/moe.test.mjs` — routing, sparse execution, exact weighted sums, dense baseline, cost counts, input validation, and chapter disclosures
-- `tests/home.test.mjs` — chapter routes and homepage integrity
-- `server.mjs` — dependency-free local HTTP server
-- `build.mjs` — generates the self-contained `standalone.html`
-- `standalone.html` — portable, fully offline website
-
-After editing the source, regenerate the offline build with `node build.mjs`.
-
-## Deploy
-
-GitHub Pages is configured to deploy from **main / (root)**. Pushing updates to `main` triggers publication. The `.nojekyll` marker serves the static HTML, CSS, JavaScript modules, and SVG assets without Jekyll processing.
-
-The hosted entry point is `index.html`; `vision.html` serves the interactive chapter, `moe.html` serves the MoE chapter, and `standalone.html` remains the self-contained offline vision chapter. Run `node build.mjs` after vision source edits to rebuild the offline chapter from `vision.html`. The homepage is not bundled into the offline chapter. Check the repository’s Actions tab for deployment status.
-
-## Next step toward a full research explainer
-
-Replace the untrained engine with a small pretrained ViT that exposes intermediate tensors, while keeping the same UI contracts. A browser inference backend would need the checkpoint plus attention/hidden-state outputs for every inspected layer. The present architecture intentionally separates the engine from the interface so that can be added without rebuilding the website.
+This is an original independent explainer inspired by the interaction style of Polo Club's Transformer Explainer. It does not copy their code/assets and is not affiliated with Georgia Tech, Polo Club, or Mistral. Sample illustrations are original SVG artwork. Images stay on the user's device; there are no analytics or inference services.

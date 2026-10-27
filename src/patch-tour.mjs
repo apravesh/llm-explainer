@@ -2,7 +2,7 @@
 import {outputColor} from './readout.mjs';
 export const PATCH_TOUR_STEPS=Object.freeze([
  {label:'Pixels',duration:3200},{label:'Patches',duration:4000},{label:'Embedding',duration:6000},
- {label:'Attention',duration:6000},{label:'MLP',duration:7200},{label:'Output',duration:4800},{label:'What next?',duration:4800}
+ {label:'Attention',duration:6000},{label:'MLP',duration:7200},{label:'Output',duration:4800},{label:'Projector',duration:4800}
 ]);
 const tourClamp=x=>Math.max(0,Math.min(1,x));
 function tourSums(input,weights,column=0){const sums=[0];input.forEach((v,i)=>sums.push(sums.at(-1)+v*weights[i][column]));return sums;}
@@ -151,6 +151,7 @@ export function createPatchTour({root,trigger,getData,prepare,onStep,onAnnouncem
  }});
  function start(){if(disposed||!prepare())return;const data=getData();source={result:data.result,selected:data.s.selected,model:data.s.model,layer:data.s.layer,head:data.s.head};plan=createPatchTourPlan(data.s,data.patches,data.result);manual=reduced.matches;panel.hidden=false;root.classList.add('has-patch-tour');q('[data-pt-identity]').textContent=plan.label;
   const thumb=q('[data-pt-thumb]');thumb.style.backgroundImage=`url('${data.imageURL}')`;thumb.style.backgroundSize=`${plan.cols*100}% ${plan.rows*100}%`;thumb.style.backgroundPosition=`${plan.cols===1?0:plan.patch.col/(plan.cols-1)*100}% ${plan.rows===1?0:plan.patch.row/(plan.rows-1)*100}%`;
+  const lastStage=q('[data-pt-step="6"]');lastStage.innerHTML=`<span>07</span>${plan.model==='pixtral'?'Projector':'Classification'}<i aria-hidden="true"></i>`;lastStage.setAttribute('aria-label',`Go to ${plan.model==='pixtral'?'Projector':'Classification'}`);
   previousStep=0;panel.dataset.step='0';clock.start({autoplay:!manual});panel.scrollIntoView({behavior:'instant',block:'start'});q('[data-pt-play]').focus({preventScroll:true});
  }
  function stop({focus=false}={}){clock.stop();panel.hidden=true;svg.replaceChildren();root.classList.remove('has-patch-tour');root.querySelectorAll('.patch-tour-focus').forEach(el=>el.classList.remove('patch-tour-focus'));source=null;plan=null;lastDraw=-1;if(focus)trigger.focus({preventScroll:true});}

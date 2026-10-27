@@ -67,8 +67,6 @@ test('patch-size and grid changes keep every token, including large and one-patc
  const html=embeddingMatrixMarkup({...s,selected:191,cols:16,rows:12},largePatches,large);assert.equal((html.match(/data-embedding-value=/g)||[]).length,192*24);assert.match(html,/data-embedding-patch="191"[^>]*aria-pressed="true"/);
  const one=runEncoder(patches.slice(0,1),1,'pixtral');assert.doesNotMatch(embeddingOverviewMarkup({...s,selected:0,cols:1,rows:1},patches.slice(0,1),one),/NaN|undefined|Infinity/);
 });
-test('compact canvas and expanded matrix share a tensor and palette in source and offline build',async()=>{
- const base=new URL('../',import.meta.url),app=await readFile(new URL('src/app.mjs',base),'utf8'),html=await readFile(new URL('standalone.html',base),'utf8');
- assert.match(app,/function diverging\(v\)\{return outputColor\(v\);\}/);assert.match(app,/function drawEmbeddings\(\)[\s\S]*?rows=result.input/);
- assert.match(html,/function embeddingMatrixMarkup/);assert.match(html,/data-embedding-patch/);assert.match(html,/encoder-embedding/);
+test('full-dimension entry point uses prepared input tensors and a bounded canvas renderer',async()=>{
+ const html=await readFile(new URL('../standalone.html',import.meta.url),'utf8');assert.match(html,/run.input/);assert.match(html,/function createMatrixRenderer/);assert.match(html,/pooled overview/);assert.match(html,/function featureMarkup/);
 });

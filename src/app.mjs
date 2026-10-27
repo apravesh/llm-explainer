@@ -1,13 +1,14 @@
+import {compactProjectorMarkup} from './projector-view.mjs';
 import {createPatchTour} from './patch-tour.mjs';
 import {createMultiplicationOverlay,mlpLanesMarkup,mountPatchConnections} from './multiplication.mjs';
 import {compactNextMarkup,outputMatrixMarkup,outputColor} from './readout.mjs';
 import { mountMultiHead } from './multi-head.mjs';
 import { mountAttentionFlow } from './attention-flow.mjs';
 import { createArchitectureMotion } from './motion.mjs';
-import { expansionMarkup, nextRailPatch, railScrollOffset, STAGE_NAMES } from './expansion.mjs';
+import { expansionMarkup, nextRailPatch, railScrollOffset, stageNames, STAGE_NAMES } from './expansion.mjs';
 import { DIM, HEADS, DEPTH, HEAD_DIM, patchify, imageShape, runEncoder, dot, rotatePair } from './engine.mjs';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const state={embeddingDetail:false,clsStep:0,decoderStep:0,projectorDetail:false,headDetailOpen:false,compareCausal:false,attentionInspect:null,expanded:null,scalar:408,dimension:0,qkv:'q',ffn:'up',adapter:'first',model:'vit',patch:16,layer:0,head:0,selected:21,key:22,step:3,sample:'bird',ropeMode:'2d',width:96,height:96,cols:6,rows:6};
+const state={embeddingDetail:false,clsStep:0,decoderStep:0,projectorDetail:false,headDetailOpen:false,compareCausal:false,attentionInspect:null,expanded:null,scalar:408,dimension:0,qkv:'q',ffn:'up',adapter:'first',model:'pixtral',patch:16,layer:0,head:0,selected:21,key:21,step:3,sample:'bird',ropeMode:'2d',width:128,height:96,cols:8,rows:6};
 let image, patches=[], result, imageURL='', uploadURL=null, loadTicket=0;
 let patchTour=null;
 const surface=document.createElement('canvas'),ctx=surface.getContext('2d',{willReadFrequently:true});
@@ -45,7 +46,10 @@ function render(){if(!result)return;patchTour?.checkData();$('#tour').disabled=f
  $('#matrix-caption').textContent=`${tokenCount()} × ${tokenCount()} · no causal mask`;
  $('#output-shape').textContent=state.model==='vit'?`${tokenCount()} × 24`:`${patches.length} × 24`;
  $('#output-destination').innerHTML=`<span>${state.model==='vit'?'patches + [CLS]':'patches only'}</span><small>after all ${DEPTH} blocks</small><small>vectors, not text</small>`;
- $('#next-path-preview').innerHTML=compactNextMarkup(state.model);
+ $('#next-path-preview').innerHTML=state.model==='pixtral'?compactProjectorMarkup(state,result):compactNextMarkup(state.model);
+ $('#next-stage-title').textContent=stageNames(state.model)[6];
+ $('#model-scale-note').innerHTML=state.model==='pixtral'?'<strong>Teaching model: 24 features per patch.</strong><span>Pixtral-12B: 1,024 features · 24 vision layers · projector → 5,120 features.</span>':'<strong>Teaching model: 24 features per token.</strong><span>Classic ViT-B/16: 768 features · 12 vision layers.</span>';
+ $('#next-path-preview').setAttribute('aria-label',state.model==='pixtral'?'Explain the projector and text-decoder handoff':'Explain the CLS classification readout');
  renderSequence();drawEmbeddings();drawAttention();renderVectors();renderDetail();
  $$('.stage').forEach(s=>s.classList.toggle('active',+s.dataset.stage===state.step));$('#step-count').textContent=`${state.step+1} / ${STAGE_NAMES.length}`;$('#step-back').disabled=state.step===0;$('#step-next').disabled=state.step===STAGE_NAMES.length-1;renderExpansion();patchConnections.schedule();
 }
@@ -71,9 +75,9 @@ function renderVectors(){const l=currentLayer(),i=tokenIndex(),h=currentHead();[
  $('#output-vectors').setAttribute('aria-label',`${result.final.length} final token vectors, each with ${DIM} features. Expand output matrix.`);
 }
 const details=[
- ['THE INPUT','Start with pixels, not words.'],['PATCHIFICATION','From a grid to a sequence.'],['PATCH EMBEDDING','One hidden state per patch.'],['SELF-ATTENTION','Every patch, in conversation.'],['FEED-FORWARD NETWORK','Mix features, not patches.'],['THE READOUT','Representations, not sentences.'],['WHAT HAPPENS NEXT','A classifier or a text decoder?']
+ ['THE INPUT','Start with pixels, not words.'],['PATCHIFICATION','From a grid to a sequence.'],['PATCH EMBEDDING','One hidden state per patch.'],['SELF-ATTENTION','Every patch, in conversation.'],['FEED-FORWARD NETWORK','Mix features, not patches.'],['THE READOUT','Representations, not sentences.'],['PROJECTOR','From vision width to language width.']
 ];
-function renderDetail(){const p=currentPatch(),i=tokenIndex(),l=currentLayer(),h=currentHead(),isPix=state.model==='pixtral',d=details[state.step];let description='',formula='',note='',visual='';
+function renderDetail(){const p=currentPatch(),i=tokenIndex(),l=currentLayer(),h=currentHead(),isPix=state.model==='pixtral',d=state.step===6?(isPix?['PROJECTOR','From vision width to language width.']:['CLASSIFICATION','Read the CLS summary.']):details[state.step];let description='',formula='',note='',visual='';
  $('#detail-kicker').textContent=`0${state.step+1} / ${d[0]}`;$('#detail-title').textContent=d[1];
  if(state.step===0){description=`An RGB image is a height × width × 3 array of numbers. ${isPix?'This path preserves the original aspect ratio, then pads the right and bottom edges to whole patches.':'This teaching ViT path takes a center crop and resizes it to a fixed 96 × 96 square.'} Choose an illustration or upload your own image.`;formula=`Image shape: ${state.height} × ${state.width} × 3  →  ${state.rows} rows × ${state.cols} columns of patches`;note='Demo-sized inputs, not production model resolutions. Uploads never leave your device.';visual=`<div class="patch-crop" style="${cropStyle(p,102)}" aria-label="Magnified selected patch"></div><div class="attn-facts"><div class="fact-label">Selected patch<span class="fact-value">(${p.row}, ${p.col})</span></div><div class="fact-label">Mean RGB<span class="fact-value">${p.mean.map(x=>Math.round(x)).join(', ')}</span></div><div class="fact-label">Input preprocessing<span class="fact-value" style="font-size:10px">${isPix?'resize + edge pad':'center crop + resize'}</span></div></div>`;
  }else if(state.step===1){description=`Split the image into ${patches.length} non-overlapping ${state.patch} × ${state.patch} patches. Read the grid row by row, then flatten each patch’s RGB values into a vector. Flattening changes the shape, not the information.`;formula=`${state.patch} × ${state.patch} × 3 = ${state.patch**2*3} values per patch`;note='A patch is analogous to a text token—but it starts as continuous pixels, not a vocabulary ID.';visual=`<div class="mini-equation"><div><div class="patch-crop" style="${cropStyle(p,102)}"></div><div class="mini-vector-label">patch (${p.row}, ${p.col})</div></div><span>→</span><div><div class="mini-vector">${p.pixels.slice(0,4).map(x=>`<span>${fmt(x,2)}</span>`).join('')}<span>⋮</span></div><div class="mini-vector-label">${p.pixels.length} values</div></div></div>`;
@@ -82,13 +86,13 @@ function renderDetail(){const p=currentPatch(),i=tokenIndex(),l=currentLayer(),h
  }else if(state.step===4){description=`Attention mixes information between patches. The ${isPix?'gated FFN':'MLP'} then transforms the features inside each patch independently, using the same weights for every token. A residual connection adds this update back to the current hidden state.`;formula=isPix?'h ← h + W₂[SiLU(W₁ · RMSNorm(h)) ⊙ W₃ · RMSNorm(h)]':'h ← h + W₂ · GELU(W₁ · LayerNorm(h))';note='Teaching dimensions: 24 → 48 → 24. Compare the residual stream before and after this block’s MLP.';visual=`<div class="detail-vector-group"><div class="labeled-vector"><span>before</span>${vectorRow(l.afterAttention[i])}</div><div class="labeled-vector"><span>+ update</span>${vectorRow(l.mlpDelta[i])}</div><div class="labeled-vector"><span>after</span>${vectorRow(l.output[i])}</div><div class="mini-vector-label">Block ${state.layer+1}, token ${tokenLabel(i)} · actual activations</div></div>`;
  }else if(state.step===5){
  description=`The vision encoder returns ${result.final.length} vectors, each ${DIM} numbers wide, after all ${DEPTH} teaching blocks. ${isPix?'There is one vector per image patch.':'There is one vector per image patch plus an extra [CLS] vector.'} These are contextual hidden states, not text or class probabilities.`;
- formula=`encoder output: ${result.final.length} × ${DIM}`;note='Open “What next?” to follow the classification or language-model handoff.';
+ formula=`encoder output: ${result.final.length} × ${DIM}`;note=`Open “${stageNames(state.model)[6]}” to follow the selected readout.`;
  visual=`<div class="detail-vector-group"><div class="labeled-vector"><span>selected</span>${vectorRow(result.final[i])}</div><button class="ro-next-link" data-detail-next>What happens after the encoder? →</button></div>`;
  }else{
- description=isPix?'Pixtral projects all patch vectors to the text decoder’s embedding width. The image vectors and text embeddings form one causal-decoder sequence, whose last position predicts the next text token.':'[CLS] is a learned classification token prepended before the image patches. Its final hidden state feeds a classification head. It is not an image crop, a class label, or a generated word. Pixtral’s path to text instead keeps all patch vectors.';
- formula=isPix?'patch vectors → projector → image + text sequence → next token':'[CLS] → classifier; patches → projector → text decoder';
- note='The classifier and decoder are explanatory schematics, not executed models.';
- visual=`<div class="process-stack"><div class="process-line"><strong>Classification ViT</strong><span>[CLS] → class scores</span></div><div class="process-line"><strong>Pixtral</strong><span>patches → LLM → text</span></div><button class="ro-next-link" data-detail-next>Explore the handoff →</button></div>`;
+ description=isPix?'Pixtral projects all patch vectors to the text decoder’s embedding width. The image vectors and text embeddings form one causal-decoder sequence, whose last position predicts the next text token.':'[CLS] is a learned classification token prepended before the image patches. Its final hidden state feeds a classification head. It is not an image crop, a class label, or a generated word.';
+ formula=isPix?'patch vectors → projector → image + text sequence → next token':'[CLS] → classifier → class scores';
+ note=isPix?'The decoder is an explanatory schematic, not an executed text model.':'The classifier is an explanatory schematic; no classification scores are computed.';
+ visual=`<div class="process-stack"><div class="process-line"><strong>${isPix?'Pixtral':'Classification ViT'}</strong><span>${isPix?'patches → projector → text decoder':'[CLS] → classifier → class scores'}</span></div><button class="ro-next-link" data-detail-next>Explore the ${isPix?'handoff':'classification readout'} →</button></div>`;
  }
 
  $('#detail-description').textContent=description;$('#detail-formula').textContent=formula;$('#detail-note').textContent=note;$('#detail-visual').innerHTML=visual;renderTensorInspector();
@@ -102,7 +106,7 @@ function renderTensorInspector(){
 
 function selectPatch(index,announce=true){state.selected=Math.max(state.model==='vit'?-1:0,Math.min(patches.length-1,index));state.key=tokenIndex();render();if(announce)$('#status').textContent=state.expanded===2?`Input embedding for ${tokenLabel(tokenIndex())}: ${DIM} features. All ${result.input.length} token rows remain in the matrix.`:state.expanded===5?`Final output for ${tokenLabel(tokenIndex())}: ${DIM} features. All ${result.final.length} token rows remain in the matrix.`:`Selected ${tokenLabel(tokenIndex())}. Attention block ${state.layer+1}, head ${state.head+1}.`;}
 function setStep(step,scroll=false){state.step=Math.max(0,Math.min(STAGE_NAMES.length-1,step));if(state.expanded!==null)state.expanded=state.step;if(state.step<2&&state.selected<0)state.selected=0;render();if(scroll)(state.expanded===null?$('#detail'):$('.stage.is-expanded')).scrollIntoView({behavior:'smooth',block:'nearest'});}
-function setModel(model){state.model=model;recompute();$('#status').textContent=`${model==='vit'?'Classic ViT':'Pixtral'} architecture. ${patches.length} patches, ${state.rows} rows by ${state.cols} columns.`;}
+function setModel(model){if(model!==state.model){state.projectorDetail=false;state.decoderStep=0;state.clsStep=0;}state.model=model;recompute();$('#status').textContent=`${model==='vit'?'Classic ViT':'Pixtral'} architecture. ${patches.length} patches, ${state.rows} rows by ${state.cols} columns.`;}
 function handleError(error){$('#error').textContent=error.message;$('#error').hidden=false;}
 let attentionController=null,multiHeadController=null;
 let railViewport={top:0,left:0,selected:null,signature:null};
@@ -112,6 +116,7 @@ let embeddingViewport={top:0,selected:null,signature:null};
 function renderExpansion(){
  const previousMultiHead=multiHeadController?.snapshot;multiHeadController?.dispose();multiHeadController=null;
  const previousAttention=attentionController?.snapshot;attentionController?.dispose();attentionController=null;
+ const oldProjector=$('.pv-scroll'),projectorScroll=oldProjector?.scrollLeft||0;
  const oldMlp=$('.stage-expansion .mlp-lanes-scroll'),mlpScroll=oldMlp?.scrollTop||0,mlpSelection=oldMlp?.dataset.selected;
  const oldEmbedding=$('.eb-matrix-scroll');
  if(oldEmbedding)embeddingViewport={top:oldEmbedding.scrollTop,selected:oldEmbedding.dataset.selected,signature:oldEmbedding.dataset.signature};
@@ -154,6 +159,7 @@ function renderExpansion(){
    onInspect(kind){state.attentionInspect=state.attentionInspect===kind?null:kind;if(['q','k','v'].includes(kind))state.qkv=kind;renderKeepingFocus(`[data-attn-inspect="${kind}"]`);},
    onCompare(value){state.compareCausal=value;renderKeepingFocus('#compare-causal');}
  });
+ const projectorScrollElement=$('.pv-scroll');if(projectorScrollElement)projectorScrollElement.scrollLeft=projectorScroll;
  const nextMlp=$('.stage-expansion .mlp-lanes-scroll');if(nextMlp){nextMlp.scrollTop=mlpScroll;if(mlpSelection!==String(state.selected))revealSelectedItem(nextMlp);}
  const matrix=$('.ro-matrix-scroll');
  if(matrix){
@@ -190,7 +196,7 @@ function openExpansion(step){
  architectureMotion.run(step,()=>{
    state.expanded=step;setStep(step);
    if(origin&&(!origin.isConnected||origin.getClientRects().length===0))$(`#stage-trigger-${step}`).focus({preventScroll:true});
-   $('#status').textContent=`${details[step][0]} expanded inside the architecture.`;
+   $('#status').textContent=`${stageNames(state.model)[step]} expanded inside the architecture.`;
  });
 }
 function closeExpansion(){
@@ -202,16 +208,11 @@ $('#architecture').addEventListener('click',e=>{
  const target=e.target.closest('button');if(!target)return;
  if(target.hasAttribute('data-multiply')){multiplicationOverlay.open(target.dataset.multiply,target);return;}
  if(target.hasAttribute('data-mlp-patch')){selectPatch(+target.dataset.mlpPatch);const button=$(`.stage.is-expanded .stage-expansion [data-mlp-patch="${state.selected}"]`)||$(`#ffn-viz [data-mlp-patch="${state.selected}"]`);button?.focus({preventScroll:true});return;}
- if(target.hasAttribute('data-next-model')){
-   if(target.dataset.nextModel===state.model)return;
-   state.projectorDetail=false;state.decoderStep=0;setModel(target.dataset.nextModel);
-   $(`.ro-path[data-next-model="${state.model}"]`).focus({preventScroll:true});
-   $('#stage-expansion-6').scrollIntoView({behavior:'instant',block:'start'});return;
- }
  if(target.hasAttribute('data-decoder-step')){state.decoderStep=+target.dataset.decoderStep;renderKeepingFocus(`[data-decoder-step="${state.decoderStep}"]`);return;}
  if(target.hasAttribute('data-projector-detail')){state.projectorDetail=!state.projectorDetail;renderKeepingFocus('[data-projector-detail]');return;}
  if(target.hasAttribute('data-embedding-patch')){selectPatch(+target.dataset.embeddingPatch);$('.eb-matrix-row[aria-pressed="true"]').focus({preventScroll:true});return;}
  if(target.hasAttribute('data-output-patch')){selectPatch(+target.dataset.outputPatch);$('.ro-matrix-row[aria-pressed="true"]').focus({preventScroll:true});return;}
+ if(target.hasAttribute('data-projector-patch')){const source=target.dataset.projectorSource;selectPatch(+target.dataset.projectorPatch);$(`[data-projector-source="${source}"][aria-pressed="true"]`)?.focus({preventScroll:true});return;}
  if(target.hasAttribute('data-readout-patch')){selectPatch(+target.dataset.readoutPatch);renderKeepingFocus(`[data-readout-patch="${state.selected}"]`);return;}
  if(target.hasAttribute('data-head-detail-close')){state.headDetailOpen=false;state.attentionInspect=null;renderKeepingFocus(`.mh-head-heading[data-mh-open="${state.head}"]`);return;}
  if(target.hasAttribute('data-attn-close')){const kind=state.attentionInspect;state.attentionInspect=null;renderKeepingFocus(kind==='merge'?'[data-mh-project]':`[data-attn-inspect="${kind}"]`);return;}
@@ -246,6 +247,8 @@ $('#architecture').addEventListener('keydown',e=>{
  if(e.key==='Escape'&&state.expanded!==null){e.preventDefault();closeExpansion();return;}
  const mlpPatch=e.target.closest('[data-mlp-patch]');
  if(mlpPatch){const next=nextRailPatch(+mlpPatch.dataset.mlpPatch,e.key,patches.length,state.model==='vit');if(next!==null){e.preventDefault();selectPatch(next);const button=$(`.stage.is-expanded .stage-expansion [data-mlp-patch="${next}"]`)||$(`#ffn-viz [data-mlp-patch="${next}"]`);button?.focus({preventScroll:true});}return;}
+ const projectorRow=e.target.closest('[data-projector-patch]');
+ if(projectorRow){const next=nextRailPatch(+projectorRow.dataset.projectorPatch,e.key,patches.length,false);if(next!==null){e.preventDefault();const source=projectorRow.dataset.projectorSource;selectPatch(next);$(`[data-projector-source="${source}"][aria-pressed="true"]`)?.focus({preventScroll:true});}return;}
  const embeddingRow=e.target.closest('[data-embedding-patch]');
  if(embeddingRow){const next=nextRailPatch(+embeddingRow.dataset.embeddingPatch,e.key,patches.length,state.model==='vit');if(next!==null){e.preventDefault();selectPatch(next);$('.eb-matrix-row[aria-pressed="true"]').focus({preventScroll:true});}return;}
  const outputRow=e.target.closest('[data-output-patch]');

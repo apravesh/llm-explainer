@@ -70,7 +70,7 @@ test('patch wires connect source and target centers without crossing into anothe
  assert.equal(patchConnectionPath(10,20,60,90),'M10,20 C34,20 36,90 60,90');
 });
 test('offline bundle includes overlay and connected lanes without external modules',async()=>{
- const html=await readFile(new URL('../standalone.html',import.meta.url),'utf8');assert.match(html,/function createMultiplicationOverlay/);assert.match(html,/function mlpLanesMarkup/);assert.match(html,/mm-dialog/);assert.match(html,/patch-embedding-wires/);
+ const html=await readFile(new URL('../standalone.html',import.meta.url),'utf8');assert.match(html,/function createFullOverlay/);assert.match(html,/function createFullViews/);assert.match(html,/full-math-dialog/);assert.match(html,/full-patch-wires/);
 });
 
 for(const model of ['vit','pixtral'])test(`${model}: full output matrix includes every exact product with correct token mapping`,()=>{
