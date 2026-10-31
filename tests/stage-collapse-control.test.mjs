@@ -15,7 +15,7 @@ test('all expanded stages use the shared header without a duplicate Collapse but
 test('the existing minus toggle and Escape still collapse and restore heading focus',async()=>{
  const app=await read('src/full-app.mjs');
  assert.match(app,/state.expanded===\+b.dataset.step\?collapse\(\):openStage\(\+b.dataset.step\)/);
- assert.match(app,/e.key==='Escape'&&state.expanded!==null\)\{e.preventDefault\(\);collapse\(\);return;/);
+ assert.match(app,/e.key==='Escape'&&state.expanded!==null\)\{e.preventDefault\(\);if\(state.expanded===4&&state.mlpCalculation\)closeMlpCalculation\(\);else collapse\(\);return;/);
  assert.match(app,/motion.run\(null,\(\)=>\{const i=state.expanded;state.expanded=null;render\(\);\$\(`#stage-trigger-\$\{i\}`\)\?\.focus/);
 });
 test('attention calculation collapse remains separate from collapsing its whole stage',async()=>{

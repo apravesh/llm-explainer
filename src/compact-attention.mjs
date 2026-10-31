@@ -1,0 +1,10 @@
+import {patchWindow,patchWindowLabel} from './patch-window.mjs';
+/** A crop of the existing full softmax, never a new six-token softmax. */
+export function compactAttentionMarkup(data,start){
+ const w=patchWindow(data.n,start),label=i=>data.c.cls&&i===0?'CLS':`p${String(i-(data.c.cls?1:0)).padStart(2,'0')}`;
+ let peak=0;for(const value of data.head.attention.data)peak=Math.max(peak,value);
+ const pitch=28,left=42,top=40,size=w.count*pitch;let cells='',labels='';
+ w.indices.forEach((q,r)=>{labels+=`<text x="34" y="${top+r*pitch+17}" text-anchor="end">${label(q)}</text><text x="${left+r*pitch+14}" y="30" text-anchor="middle">${label(q)}</text>`;
+  w.indices.forEach((k,c)=>{const weight=data.head.attention.data[q*data.n+k],selected=q===data.query&&k===data.key;cells+=`<g data-window-pair="${q}:${k}" data-attention-stage="softmax"><title>${label(q)} → ${label(k)}: ${(weight*100).toFixed(4)}% · full-row softmax over ${data.n} keys</title><rect x="${left+c*pitch}" y="${top+r*pitch}" width="${pitch}" height="${pitch}" fill="transparent"/><circle cx="${left+c*pitch+14}" cy="${top+r*pitch+14}" r="11" fill="rgba(130,91,201,${.08+.84*Math.sqrt(weight/(peak||1))})"${selected?' stroke="#7854a3" stroke-width="1.5"':''}/></g>`;});});
+ return `<svg data-compact-attention-svg viewBox="0 0 224 ${size+62}" role="img" aria-label="${w.count} query rows by ${w.count} key columns; full ${data.n} by ${data.n} attention"><text x="126" y="10" text-anchor="middle" class="ca-axis">KEY PATCHES</text>${labels}<rect x="${left}" y="${top-4}" width="${size}" height="4" fill="${w.before?'#e4e7ee':'transparent'}"/><rect x="${left}" y="${top+size}" width="${size}" height="4" fill="${w.after?'#e4e7ee':'transparent'}"/>${cells}<text x="${left+size/2}" y="${top+size+18}" text-anchor="middle" class="ca-axis">QUERY ROWS × KEY COLUMNS</text></svg><span class="ca-window">${patchWindowLabel(w,data.c.cls)}</span><small class="ca-note">Full ${data.n} × ${data.n} · no causal mask<br>All ${data.n} keys still participate</small>`;
+}
