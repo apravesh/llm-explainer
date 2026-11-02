@@ -44,9 +44,6 @@ export function blockHandoff(run,selected,layerIndex){
   nextInput:run.layers[layerIndex+1]?at(run.layers[layerIndex+1].input):null};
 }
 /** Only the small arrows attached to the block diagram; no separate navigator UI. */
-export function inlineBlockControlsMarkup(index,count){
- return `<span class="inline-block-controls expanded-block-controls" role="group" aria-label="Transformer block"><button type="button" data-inline-block-step="-1" aria-label="Inspect previous transformer block" aria-controls="architecture">‹</button><span>Block ${index+1} / ${count}</span><button type="button" data-inline-block-step="1" aria-label="Inspect next transformer block" aria-controls="architecture">›</button></span>`;
-}
 export function createInlineBlockNavigation({root,getRun,getState,beforeSelect,onSelect,onAnnounce=()=>{}}){
  const doc=root.ownerDocument,win=doc.defaultView,reduced=win.matchMedia('(prefers-reduced-motion: reduce)');
  let animations=[],disposed=false,lastRun=null;
@@ -54,7 +51,7 @@ export function createInlineBlockNavigation({root,getRun,getState,beforeSelect,o
  function sync(){
   if(disposed)return;const run=getRun();
   if(run!==lastRun){cancelAnimations();lastRun=run;}
-  root.querySelectorAll('[data-inline-block-step]').forEach(b=>{
+  root.querySelectorAll('.block-label [data-inline-block-step]').forEach(b=>{
    const next=(getState().layer||0)+Number(b.dataset.inlineBlockStep);
    b.disabled=!run||next<0||next>=run.config.depth||!run.layers[next];
   });
@@ -73,14 +70,13 @@ export function createInlineBlockNavigation({root,getRun,getState,beforeSelect,o
   onAnnounce(`Transformer block ${next+1} of ${run.config.depth}. Self-attention and MLP updated; the selected patch and head are unchanged.`);
  }
  function navigate(event,key=false){
-  const b=event.target.closest('[data-inline-block-step]');if(!b||!root.contains(b)||b.disabled)return;
+  const b=event.target.closest('[data-inline-block-step]');if(!b||!root.contains(b)||!b.closest('.block-label')||b.disabled)return;
   const run=getRun();if(!run)return;
   const next=key?blockKeyTarget(getState().layer,event.key,run.config.depth):getState().layer+Number(b.dataset.inlineBlockStep);
   if(next===null)return;if(key)event.preventDefault();
-  const expanded=!!b.closest('.stage-expansion'),direction=b.dataset.inlineBlockStep;
+  const direction=b.dataset.inlineBlockStep;
   seek(next);
-  const scope=expanded?'.stage.is-expanded .stage-expansion ':'.block-label ';
-  const controls=[...root.querySelectorAll(scope+'[data-inline-block-step]')];
+  const controls=[...root.querySelectorAll('.block-label [data-inline-block-step]')];
   const focus=controls.find(el=>el.dataset.inlineBlockStep===direction&&!el.disabled)||controls.find(el=>!el.disabled);
   focus?.focus({preventScroll:true});
  }

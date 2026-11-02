@@ -70,6 +70,9 @@ test('reduced-motion/manual playback shows end frames and schedules no motion',(
 test('long frame gaps cannot skip unseen stages',()=>{
  const h=clockHarness();h.clock.start();h.advance();h.advance(100000);assert.equal(h.clock.snapshot.step,1);assert.equal(h.clock.snapshot.elapsed,0);assert.deepEqual(h.steps.map(s=>s.step),[0,1]);
 });
-test('the offline bundle includes the tour and no longer has the inert tour handler',async()=>{
- const html=await readFile(new URL('../standalone.html',import.meta.url),'utf8');assert.match(html,/function startTour/);assert.match(html,/Play the animated walkthrough/);assert.doesNotMatch(html,/Use the right arrow to advance through the seven stages/);
+test('the reference tour is not included in the active app or offline bundle',async()=>{
+ for(const name of ['vision.html','src/full-app.mjs','standalone.html']){
+  const source=await readFile(new URL('../'+name,import.meta.url),'utf8');
+  assert.doesNotMatch(source,/function startTour|function stopTour|tourFrame|tourBar|id="tour"|data-tour-|Play the animated walkthrough|Follow a patch/);
+ }
 });

@@ -56,7 +56,7 @@ test('served and offline interfaces expose only inline block arrows, without the
  const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
  const [html,vision,app,nav]=await Promise.all(['standalone.html','vision.html','src/full-app.mjs','src/block-navigation.mjs'].map(read));
  for(const page of [html,vision]){assert.match(page,/data-inline-block-step/);assert.doesNotMatch(page,/id="layer"|id="layer-number"|ENCODER DEPTH|id="block-navigator"/);}
- assert.match(html,/function createInlineBlockNavigation/);assert.match(html,/function inlineBlockControlsMarkup/);
+ assert.match(html,/function createInlineBlockNavigation/);assert.doesNotMatch(html,/inlineBlockControlsMarkup/);
  assert.doesNotMatch(app,/createBlockNavigation|\$\('#layer'\)/);
  assert.match(nav,/visibilitychange/);assert.match(nav,/prefers-reduced-motion: reduce/);assert.match(nav,/win.removeEventListener\('resize'/);
  assert.doesNotMatch(nav,/createElement|setInterval|data-block-play|data-block-index/);
