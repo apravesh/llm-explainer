@@ -6,3 +6,11 @@
 @media(max-width:760px){.bv-block{grid-template-columns:1fr;padding:14px}.bv-block>.bv-arrow,.bv-compute>.bv-arrow,.bv-gpu>.bv-arrow{transform:rotate(90deg)}.bv-module{width:100%}.bv-port br{display:none}.bv-port b{margin-left:10px}.bv-compute,.bv-gpu{grid-template-columns:1fr}.bv-memory{grid-template-columns:1fr}.bv-time>div{grid-template-columns:85px minmax(0,1fr) 92px;gap:8px}.bv-time{padding:14px}.bv-time strong{font-size:11px}#budget-tabs button{flex:1;min-width:100px;padding:10px;font-size:12px}.bv-total{font-size:23px}.bv-caption{align-items:flex-start}.bv-weight span small{overflow-wrap:anywhere}}
 
 .budget-settings{margin:0 0 14px;padding:12px 0}.budget-settings .controls{padding-top:18px}
+
+/* Keep symbolic counts beside numeric results rather than only in the derivation. */
+.bv-symbols{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 20px;padding:14px 16px;background:#f0f3ef;border-radius:5px}.bv-symbols>div{flex:1 1 175px}.bv-symbols dt{font:12px/1.6 ui-monospace,monospace;color:#45685f}.bv-symbols dd{margin:2px 0 0;font-size:11px;color:var(--muted)}.bv-total .bv-total-formula{display:block;font:15px/1.8 ui-monospace,monospace;color:#426b69;margin:4px 0}.bv-weight-formula{display:block;font-size:12px;line-height:1.6;margin-top:2px}.bv-block-equation{font-size:12px;line-height:1.9;overflow-wrap:anywhere;margin:15px 0}.budget-cell-formula{display:block;font:11px/1.6 ui-monospace,monospace;color:#53776e;margin-top:4px;white-space:normal}#budget-table td{min-width:85px}@media(max-width:760px){.bv-symbols{gap:12px}.bv-symbols>div{flex-basis:140px}.bv-total .bv-total-formula{font-size:14px}}
+
+/* Lead with the architecture formula; evaluated counts are supporting context. */
+#parameter-diagram .bv-total .bv-total-formula{font:500 30px/1.35 ui-monospace,monospace;color:#355f59;margin:6px 0 8px;overflow-wrap:anywhere}
+#parameter-diagram .bv-total-value{display:block;font:12px/1.65 ui-monospace,monospace;color:var(--muted);margin-bottom:3px}
+@media(max-width:760px){#parameter-diagram .bv-total .bv-total-formula{font-size:26px}}
