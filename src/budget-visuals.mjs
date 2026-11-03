@@ -2,24 +2,36 @@ const count=n=>Math.round(n).toLocaleString('en-US');
 const compact=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':count(n);
 const memory=n=>n>=1073741824?(n/1073741824).toFixed(2)+' GiB':(n/1048576).toFixed(2)+' MiB';
 const work=n=>n>=1e12?(n/1e12).toFixed(2)+' TFLOPs':(n/1e9).toFixed(2)+' GFLOPs';
+/** Symbolic parameter counts use f′ for the rounded matched-budget width. */
+export function parameterFormulas(c,a){
+ const width=a.gated&&!a.moe&&a.f!==c.f?'f′':'f';
+ const attention=c.kv===c.h?'4d²':'2d² + 2d·dKV',kv=c.kv===c.h?'d²':'d·dKV';
+ const expert=`${a.gated?3:2}d${width}`,ffn=a.moe?`E × ${expert}`:expert,router=a.moe?'dE':'0';
+ return {width,attention,kv,expert,ffn,router,ffnTotal:a.moe?`${ffn} + dE`:ffn,ffnActive:a.moe?`k × ${expert} + dE`:expert,
+  stored:`${attention} + ${ffn}${a.moe?' + dE':''}`,active:`${attention} + ${a.moe?`k × ${expert} + dE`:expert}`,projection:a.moe?'Edf':`d${width}`};
+}
+function parameterLegend(c,a){return `<dl class="bv-symbols" aria-label="Parameter notation"><div><dt>d = ${count(c.d)}</dt><dd>hidden features per token</dd></div><div><dt>f = ${count(c.f)}</dt><dd>MLP intermediate width</dd></div>${a.f!==c.f?`<div><dt>f′ = ${count(a.f)}</dt><dd>matched width: 2f/3, rounded up to 64</dd></div>`:''}<div><dt>Hq = ${c.h} · Hkv = ${c.kv}</dt><dd>query heads · key/value heads</dd></div><div><dt>dh = d/Hq = ${a.dh}</dt><dd>features per head</dd></div><div><dt>dKV = Hkv × dh = ${a.dkv}</dt><dd>combined key/value width</dd></div>${a.moe?`<div><dt>E = ${c.experts} · k = ${c.k}</dt><dd>stored experts · selected per token</dd></div>`:''}<div><dt>L = ${c.layers}</dt><dd>blocks; stack count = L × block count</dd></div></dl>`;}
 function meter(n,total,kind){return `<span class="bv-meter"><i class="${kind}" style="width:${100*n/total}%"></i></span>`;}
-function weight(name,shape,n,total,kind){return `<div class="bv-weight"><span><b>${name}</b><small>${shape}</small></span><strong>${compact(n)}</strong>${meter(n,total,kind)}</div>`;}
+function weight(name,shape,n,total,kind,formula){return `<div class="bv-weight"><span><b>${name}</b><small>${shape}</small><code class="bv-weight-formula">${formula}</code></span><strong>${compact(n)}</strong>${meter(n,total,kind)}</div>`;}
 export function parameterDiagram(b,key='ordinary'){
  const c=b.c,a=b.variants[key],expertCount=a.moe?c.experts:1;
+ const formula=parameterFormulas(c,a);
  const names={ordinary:'Ordinary MLP',swiglu:'SwiGLU',matched:'Budget-matched SwiGLU',moe:'Routed SwiGLU experts'};
  return `<div class="bv-caption"><strong>One transformer block · ${names[key]}</strong><span>${count(a.stored)} stored parameters · ${count(a.active)} active per token</span></div>
+ ${parameterLegend(c,a)}
  <div class="bv-block" data-visual-variant="${key}"><span class="bv-port">Token<br><b>h</b></span><span class="bv-arrow">→</span>
- <article class="bv-module"><h3>Self-attention</h3><p class="bv-total">${compact(a.attention)} <small>${(100*a.attention/a.stored).toFixed(1)}% of block</small></p><p class="bv-step">Norm → Q/K/V projections</p>
- ${weight('WQ',`${c.d} × ${c.d}`,a.q,a.stored,'attn')}${weight('WK',`${c.d} × ${a.dkv}`,a.key,a.stored,'attn')}${weight('WV',`${c.d} × ${a.dkv}`,a.value,a.stored,'attn')}
- <div class="bv-no-weights">QKᵀ → scale → softmax → × V<small>0 learned parameters here · still compute work</small></div>${weight('WO',`${c.d} × ${c.d}`,a.o,a.stored,'attn')}<p class="bv-step">+ input residual →</p></article>
- <span class="bv-arrow">→</span><article class="bv-module bv-ffn"><h3>${names[key]}</h3><p class="bv-total">${compact(a.ffnStored+a.router)} <small>${(100*(a.ffnStored+a.router)/a.stored).toFixed(1)}% of block</small></p>
- ${a.moe?`<div class="bv-router">${weight('Router',`${c.d} × ${c.experts}`,a.router,a.stored,'router')}<small>Choose ${c.k} of ${c.experts} experts per token</small></div>`:''}
+ <article class="bv-module"><h3>Self-attention</h3><p class="bv-total">${compact(a.attention)} <code class="bv-total-formula">= ${formula.attention}</code><small>${(100*a.attention/a.stored).toFixed(1)}% of block</small></p><p class="bv-step">Norm → Q/K/V projections</p>
+ ${weight('WQ',`${c.d} × ${c.d}`,a.q,a.stored,'attn','d²')}${weight('WK',`${c.d} × ${a.dkv}`,a.key,a.stored,'attn',formula.kv)}${weight('WV',`${c.d} × ${a.dkv}`,a.value,a.stored,'attn',formula.kv)}
+ <div class="bv-no-weights">QKᵀ → scale → softmax → × V<small>0 learned parameters here · still compute work</small></div>${weight('WO',`${c.d} × ${c.d}`,a.o,a.stored,'attn','d²')}<p class="bv-step">+ input residual →</p></article>
+ <span class="bv-arrow">→</span><article class="bv-module bv-ffn"><h3>${names[key]}</h3><p class="bv-total">${compact(a.ffnStored+a.router)} <code class="bv-total-formula">= ${formula.ffnTotal}</code><small>${(100*(a.ffnStored+a.router)/a.stored).toFixed(1)}% of block</small></p>
+ ${a.moe?`<div class="bv-router">${weight('Router',`${c.d} × ${c.experts}`,a.router,a.stored,'router','dE')}<small>Choose ${c.k} of ${c.experts} experts per token</small></div>`:''}
  <p class="bv-step">Norm → ${a.gated?'two parallel expansions':'expansion'}</p>
- ${weight(a.gated?'W₁ → SiLU':'W₁ → GELU',`${c.d} × ${a.f}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn')}
- ${a.gated?weight('W₃',`${c.d} × ${a.f}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn')+'<div class="bv-no-weights">SiLU(xW₁) ⊙ xW₃<small>Featurewise gate · no extra weight matrix</small></div>':''}
- ${weight('W₂ · contract',`${a.f} × ${c.d}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn')}
- ${a.moe?`<div class="bv-experts" aria-label="${c.experts} experts; ${c.k} active for one token">${Array.from({length:Math.min(c.experts,16)},(_,i)=>`<span class="${i<c.k?'is-used':''}">E${i+1}</span>`).join('')}${c.experts>16?`<small>+ ${c.experts-16} more</small>`:''}</div><p class="small">Illustrative selection; ${compact(a.ffnActive)} expert weights used per token. All ${c.experts} sets are stored.</p>`:''}
+ ${weight(a.gated?'W₁ → SiLU':'W₁ → GELU',`${c.d} × ${a.f}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn',formula.projection)}
+ ${a.gated?weight('W₃',`${c.d} × ${a.f}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn',formula.projection)+'<div class="bv-no-weights">SiLU(xW₁) ⊙ xW₃<small>Featurewise gate · no extra weight matrix</small></div>':''}
+ ${weight('W₂ · contract',`${a.f} × ${c.d}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn',formula.projection)}
+ ${a.moe?`<div class="bv-experts" aria-label="${c.experts} experts; ${c.k} active for one token">${Array.from({length:Math.min(c.experts,16)},(_,i)=>`<span class="${i<c.k?'is-used':''}">E${i+1}</span>`).join('')}${c.experts>16?`<small>+ ${c.experts-16} more</small>`:''}</div><p class="small">Illustrative selection; ${compact(a.ffnActive)} = k × 3df expert weights used per token. Including the router: ${compact(a.ffnActive+a.router)} = ${formula.ffnActive}. All ${c.experts} sets are stored.</p>`:''}
  <p class="bv-step">${a.moe?'Weighted sum → ':''}+ residual →</p></article><span class="bv-arrow">→</span><span class="bv-port">Token<br><b>h′</b></span></div>
+ <p class="bv-block-equation"><strong>Block totals:</strong> stored = <code>${formula.stored}</code> = ${count(a.stored)}; active/token = <code>${formula.active}</code> = ${count(a.active)}.</p>
  <p class="small">Cards show structure, not physical size. Every thin meter uses the same denominator: total stored parameters in this block. Counts omit norms, biases and embeddings; full assumptions remain below.</p>`;
 }
 export function computeDiagram(b){
