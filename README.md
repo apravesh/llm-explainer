@@ -5,6 +5,7 @@ Interactive chapters at `apravesh/llm-explainer`, deployed using GitHub Pages (`
 1. Text transformers (GPT2): links to Polo Club's independent Transformer Explainer.
 2. Vision encoders (Pixtral – Multimodal LLMs): this project's visual explorer.
 3. Mixture of Experts: an untrained minimal sparse FFN with top-1 / top-2 routing.
+4. Parameters & compute: an interactive architecture ledger and GPU-mechanics primer.
 
 ## Vision: real dimensions, synthetic weights
 
@@ -117,7 +118,7 @@ A separate deterministic 4 → 6 → 4 toy MLP lets readers switch between three
 
 ## MoE chapter
 
-The MoE chapter is intentionally still a small teaching model, separate from the full-size vision engine: eight input features, four 8 → 16 → 8 GELU experts, an 8 → 4 router, top-1/top-2 routing, shared input LayerNorm, and a residual connection. Only selected experts run. The UI exposes gates, exact weighted mixtures, a dense comparison, load counts, and animations. It is not pretrained language-model inference.
+The MoE chapter is intentionally still a small teaching model, separate from the full-size vision engine: eight input features, four 8 → 16 → 8 experts (GELU by default, optionally SwiGLU), an 8 → 4 router, top-2 routing by default (top-1 remains selectable), shared input LayerNorm, and a residual connection. Only selected experts run. The UI exposes gates, exact weighted mixtures, a dense comparison, load counts, and animations. It is not pretrained language-model inference.
 
 ## Run, test, build
 
@@ -153,3 +154,23 @@ The earlier `engine.mjs`, `app.mjs`, and related small-model view modules remain
 GitHub Pages serves `main / root`, with `.nojekyll`, no external hosting. `index.html` and the MoE chapter remain separate. Rebuild the offline file after edits, run tests, and publish all new full-runtime modules together with HTML/styles; then verify the Pages deployment.
 
 This is an original independent explainer inspired by the interaction style of Polo Club's Transformer Explainer. It does not copy their code/assets and is not affiliated with Georgia Tech, Polo Club, or Mistral. Sample illustrations are original SVG artwork. Images stay on the user's device; there are no analytics or inference services.
+
+### MoE expert architecture and parameter budgets
+
+The local MoE chapter keeps routing separate from the expert activation choice. Selecting SwiGLU adds a separate 8 × 16 W₃ matrix per expert, applies SiLU to W₁'s output, multiplies matching intermediate features, and contracts through W₂. The router and common expert weights retain their seeds when switching architectures. Only selected experts execute in either mode. The input is sent in full to each selected expert, not split across experts.
+
+The page makes routing probabilities versus normalized mixture weights explicit. GELU expert weights total 256 per expert; SwiGLU totals 384. Four experts plus the 32-weight router therefore store 1,056 or 1,568 parameters. Top-1 uses 288 or 416; top-2 uses 544 or 800. The cost table and bars show stored parameters, active parameters per token, and linear MACs, with the exclusions and non-speedup caveat stated. A collapsed parameter-budget explanation shows how standard attention's 4d² compares with the 2df/3df MLP formulas; attention is not executed in this toy.
+
+Expert inspection uses a process diagram before optional numerical multiplication tables. Internal SiLU feature gates are explicitly distinguished from router weights. Numeric disclosures remain open/closed across token and architecture changes. The redundant top-of-page token-tour shortcut is removed; the in-flow animation automatically loops through the selected token’s cached routing, expert computation, mixture, and residual, holding the completed result before restarting. There are no stop/replay controls. It pauses off-screen, while the tab is hidden, or while the method dialog is open; reduced motion shows the complete result without looping.
+
+## Parameters & compute chapter
+
+`analytics.html` is a separate analytical chapter, linked from the homepage and bottom of Vision/MoE. It compares ordinary MLP, same-width SwiGLU, budget-matched SwiGLU (rounded up to 64), and routed SwiGLU MoE, with MHA/GQA/MQA projections. `src/architecture-budget.mjs` validates inputs and computes exact bias-free weight counts and explicitly approximate forward FLOPs, weight storage, decoder KV cache, a naïve score buffer, and an isolated GEMM roofline lower bound. None of these estimates execute a model or predict measured GPU latency. The page cites primary papers and NVIDIA documentation and discloses omitted embeddings/projectors/norms, runtime overhead, causal-vs-bidirectional work, optimizer state and expert communication.
+
+### Vector-first MoE view
+
+The MoE overview represents each token state, expert output, weighted contribution and residual result as an eight-cell horizontal vector, with exact values on hover. Solid arrows connect the full normalized x directly to selected expert inputs; the router's scalar weights modulate outputs rather than replacing x. The same feature ordering is preserved in raw and weighted strips. Inactive experts show no fabricated activations. Input editors and combine/residual numeric tables are opt-in details. On narrow screens the connected diagram scrolls horizontally instead of dropping the arrows or turning the computation into disconnected cards.
+
+The analytics chapter has three accessible visual tabs: Parameters (a transformer block with per-projection allocations and selectable MLP/SwiGLU/MoE design), Token compute & memory (per-block FLOP flow and separately scoped weight/cache/score allocations for the MoE comparison), and GPU execution (device memory → tile reuse → matrix operations with isolated GEMM resource lower bounds). Shared configuration survives tab changes. Tables and derivations are opt-in below the diagrams; colors/meters do not imply physical GPU layout or measured latency.
+
+The MoE main block includes two compact non-expandable context sections before its computed input: shared decoder self-attention and the attention output projection Wₒ plus the pre-attention residual. Both are explicitly schematic, with no fabricated activations. The existing synthetic h remains the numerical start of the demo. Wₒ is not a vocabulary/LM head, and neither context section is counted as an executed MoE stage.

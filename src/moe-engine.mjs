@@ -6,7 +6,7 @@ export function moeLinear(x,w){if(x.length!==w.length)throw Error('Input/weight 
 export function moeNorm(x){const mean=x.reduce((a,b)=>a+b,0)/x.length,variance=x.reduce((a,v)=>a+(v-mean)**2,0)/x.length;return x.map(v=>(v-mean)/Math.sqrt(variance+1e-5));}
 export const moeGelu=x=>.5*x*(1+Math.tanh(Math.sqrt(2/Math.PI)*(x+.044715*x**3)));
 function moeWeights(n,m,seed,scale=1){const r=moeRng(seed),s=Math.sqrt(3/n)*scale;return Array.from({length:n},()=>Array.from({length:m},()=> (2*r()-1)*s));}
-export function createMoeModel(seed=108){return {router:moeWeights(MOE_DIM,MOE_EXPERTS,seed),experts:Array.from({length:MOE_EXPERTS},(_,i)=>({up:moeWeights(MOE_DIM,MOE_HIDDEN,seed+10+i*2),down:moeWeights(MOE_HIDDEN,MOE_DIM,seed+11+i*2,.65)}))};}
+export function createMoeModel(seed=108,{activation='gelu'}={}){if(!['gelu','swiglu'].includes(activation))throw Error('Unknown expert activation');return {activation,router:moeWeights(MOE_DIM,MOE_EXPERTS,seed),experts:Array.from({length:MOE_EXPERTS},(_,i)=>({up:moeWeights(MOE_DIM,MOE_HIDDEN,seed+10+i*2),down:moeWeights(MOE_HIDDEN,MOE_DIM,seed+11+i*2,.65),...(activation==='swiglu'?{parallel:moeWeights(MOE_DIM,MOE_HIDDEN,seed+100+i)}:{})}))};}
 export function teachingTokens(text){const labels=String(text).trim().split(/\s+/u).filter(Boolean).slice(0,12);return labels.map((label,index)=>{let hash=2166136261;for(const char of `${label}:${index}`)hash=Math.imul(hash^char.codePointAt(0),16777619);const random=moeRng(hash);return {label,index,hidden:Array.from({length:MOE_DIM},()=>Math.round((random()*4-2)*100)/100)};});}
 export function routeToken(normalized,router,{k=1,weighting='selected'}={}){
  if(![1,2].includes(k))throw Error('Teaching router supports top-1 or top-2');
@@ -17,7 +17,12 @@ export function routeToken(normalized,router,{k=1,weighting='selected'}={}){
  const gates=probabilities.map((p,i)=>selected.includes(i)?(weighting==='selected'?p/selectedMass:p):0);
  return {logits,probabilities,selected,gates,selectedMass,k,weighting};
 }
-export function expertForward(x,expert){const pre=moeLinear(x,expert.up),activated=pre.map(moeGelu),output=moeLinear(activated,expert.down);return {pre,activated,output};}
+export const moeSilu=x=>x/(1+Math.exp(-x));
+export function expertForward(x,expert){
+ const pre=moeLinear(x,expert.up),parallel=expert.parallel?moeLinear(x,expert.parallel):null;
+ const gate=parallel?pre.map(moeSilu):null,activated=parallel?gate.map((g,j)=>g*parallel[j]):pre.map(moeGelu);
+ const output=moeLinear(activated,expert.down);return {pre,parallel,gate,activated,output};
+}
 export function runMoeToken(hidden,model,{k=1,weighting='selected',mode='sparse'}={}){
  if(hidden.length!==MOE_DIM||hidden.some(x=>!Number.isFinite(x)))throw Error('Need eight finite hidden-state values');
  if(!['sparse','dense'].includes(mode))throw Error('Unknown FFN mode');
@@ -32,5 +37,5 @@ export function runMoeToken(hidden,model,{k=1,weighting='selected',mode='sparse'
  return {hidden:hidden.slice(),normalized,router,selected,gates,experts,contributions,mixed,output,mode,k,weighting,expertEvaluations:selected.length};
 }
 export function runMoeBatch(tokens,model,options){const traces=tokens.map(t=>runMoeToken(t.hidden,model,options)),loads=Array(MOE_EXPERTS).fill(0);traces.forEach(t=>t.selected.forEach(i=>loads[i]++));return {traces,loads,assignments:loads.reduce((a,b)=>a+b,0)};}
-export function moeCost({mode='sparse',k=1}={}){const expert=2*MOE_DIM*MOE_HIDDEN,router=MOE_DIM*MOE_EXPERTS;return {expert,router:mode==='dense'?0:router,stored:mode==='dense'?expert:router+MOE_EXPERTS*expert,active:mode==='dense'?expert:router+k*expert,expertEvaluations:mode==='dense'?1:k};}
+export function moeCost({mode='sparse',k=1,activation='gelu'}={}){if(!['gelu','swiglu'].includes(activation)||!['dense','sparse'].includes(mode)||!Number.isInteger(k)||k<1||k>MOE_EXPERTS)throw Error('Invalid cost configuration');const expert=(activation==='swiglu'?3:2)*MOE_DIM*MOE_HIDDEN,router=MOE_DIM*MOE_EXPERTS;return {expert,router:mode==='dense'?0:router,stored:mode==='dense'?expert:router+MOE_EXPERTS*expert,active:mode==='dense'?expert:router+k*expert,expertEvaluations:mode==='dense'?1:k};}
 export function moeMixPrefix(trace,count){return Array.from({length:MOE_DIM},(_,d)=>trace.selected.slice(0,count).reduce((sum,e)=>sum+trace.contributions[e][d],0));}

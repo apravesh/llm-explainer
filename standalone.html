@@ -848,6 +848,8 @@ html.gelu-open{overflow:hidden}.gelu-dialog{width:min(1020px,calc(100vw - 30px))
 #architecture:not(.has-expansion) :is(.embed-stage,.output-stage,.next-stage)>.stage-title{min-width:max-content}
 #architecture:not(.has-expansion) :is(.embed-stage,.output-stage,.next-stage)>.stage-title .stage-plus{flex-shrink:0}
 
+.analytics-next{border-top:1px solid #dce4e9;padding:28px 20px;margin:35px auto 0;background:#f0f4f6;border-radius:7px}.analytics-next h2{font-size:23px;font-weight:500;line-height:1.4;margin:8px 0}.analytics-next>p{font-size:12px;line-height:1.8;color:#73859a}.analytics-next>p:first-child{font-size:9px;letter-spacing:1.4px}.analytics-next a{color:#507c85}.analytics-next a:hover{text-decoration:underline}
+
 </style>
 </head>
 <body>
@@ -900,6 +902,7 @@ html.gelu-open{overflow:hidden}.gelu-dialog{width:min(1020px,calc(100vw - 30px))
       <aside class="packing"><div class="lab-label">MANY IMAGES. ONE BATCH.</div><div id="packing-grid" class="packing-grid" role="img" aria-label="Block-diagonal attention mask: patches attend only within their own image"></div><div class="packing-legend"><span><i></i> Image A</span><span><i></i> Image B</span><span>blank = masked</span></div><h3>Pack, don’t pad.</h3><p>Pixtral packs image sequences together. A block-diagonal mask keeps attention inside each image; the language decoder combines them later.</p></aside></div>
     <div class="reading-note"><strong>A note on resolution.</strong> Flexible does not mean unlimited. Bigger images produce more patches, and dense encoder attention scales quadratically with the patch count. The demo uses small images to keep every number inspectable.</div>
   </section>
+  <section class="analytics-next"><p>THE MATH BEHIND THE DESIGN</p><h2><a href="analytics.html">Parameters &amp; compute →</a></h2><p>Where do the weights live? Compare attention, MLP, SwiGLU and MoE, then explore GPU compute and memory trade-offs.</p></section>
   <section class="closing"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><h3>Pixels in. Contextual representations out.</h3><p>The transformer is familiar. The tokens—and their geometry—are new.</p></div><a href="#explorer">Back to the explorer ↑</a></section>
 </main>
 <footer><div><strong>VISION EXPLAINER</strong><span>An independent companion inspired by <a href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener">Transformer Explainer ↗</a>. Not affiliated with Georgia Tech or Mistral.</span></div><div><a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener">ViT paper ↗</a><a href="https://arxiv.org/abs/2410.07073" target="_blank" rel="noopener">Pixtral paper ↗</a><button class="text-button" id="method-open">Method & limitations</button></div></footer>
