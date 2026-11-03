@@ -840,3 +840,5 @@ html.gelu-open{overflow:hidden}.gelu-dialog{width:min(1020px,calc(100vw - 30px))
 /* The expand affordance must not wrap or shrink away from these compact headings. */
 #architecture:not(.has-expansion) :is(.embed-stage,.output-stage,.next-stage)>.stage-title{min-width:max-content}
 #architecture:not(.has-expansion) :is(.embed-stage,.output-stage,.next-stage)>.stage-title .stage-plus{flex-shrink:0}
+
+.analytics-next{border-top:1px solid #dce4e9;padding:28px 20px;margin:35px auto 0;background:#f0f4f6;border-radius:7px}.analytics-next h2{font-size:23px;font-weight:500;line-height:1.4;margin:8px 0}.analytics-next>p{font-size:12px;line-height:1.8;color:#73859a}.analytics-next>p:first-child{font-size:9px;letter-spacing:1.4px}.analytics-next a{color:#507c85}.analytics-next a:hover{text-decoration:underline}
