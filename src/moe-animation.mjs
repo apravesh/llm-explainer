@@ -1,17 +1,17 @@
 /** A repeating visual trace of cached results; routing and model values never change. */
 export const MOE_LOOP_TIMING=Object.freeze({step:750,hold:1500});
-export function moeLoopFrame(elapsed,{dense=false,experts=2}={}){
- const stages=dense?['input','experts','combine','output']:['input','router','experts','combine','output'];
+export function moeLoopFrame(elapsed,{dense=false,experts=2,includeAttention=false}={}){
+ const stages=[...(includeAttention?['attention','projection']:[]),...(dense?['input','experts','combine','output']:['input','router','experts','combine','output'])];
  const duration=stages.length*MOE_LOOP_TIMING.step,cycleLength=duration+MOE_LOOP_TIMING.hold;
  const time=Math.max(0,elapsed),cycle=Math.floor(time/cycleLength),within=time%cycleLength;
  const phase=within>=duration?'complete':stages[Math.floor(within/MOE_LOOP_TIMING.step)];
  const count=phase==='combine'?Math.min(experts,Math.floor((within%MOE_LOOP_TIMING.step)/MOE_LOOP_TIMING.step*experts)+1):experts;
  return {phase,count,cycle};
 }
-export function mountMoeAnimation(root,{dense=false,experts=2,onFrame}){
+export function mountMoeAnimation(root,{dense=false,experts=2,includeAttention=false,onFrame}){
  const doc=root.ownerDocument,win=doc.defaultView,media=win.matchMedia('(prefers-reduced-motion: reduce)');
  let frame=null,epoch=0,elapsed=0,last=null,signature='',disposed=false,inView=true;
- function paint(){const state=media.matches?{phase:'complete',count:experts,cycle:0}:moeLoopFrame(elapsed,{dense,experts});
+ function paint(){const state=media.matches?{phase:'complete',count:experts,cycle:0}:moeLoopFrame(elapsed,{dense,experts,includeAttention});
   const next=`${state.phase}:${state.count}:${state.cycle}`;if(next===signature)return;signature=next;
   root.dataset.phase=state.phase;root.dataset.cycle=state.cycle;
   root.querySelectorAll('[data-moe-node]').forEach(node=>node.classList.toggle('running-node',!media.matches&&node.dataset.moeNode===state.phase));onFrame(state);

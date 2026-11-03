@@ -32,5 +32,5 @@ test('explanations distinguish the two gates, display accurate costs and no fake
 test('MoE page keeps teaching scope, a single working animation, and opt-in math',async()=>{
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),html=await read('moe.html'),app=await read('src/moe-app.mjs');
  assert.match(html,/id="moe-activation"/);assert.match(html,/These are different gates/);assert.doesNotMatch(html,/id="moe-tour"|Not more work for every token/);
- assert.match(app,/moeCostMarkup\(state\)/);assert.match(app,/expertProcessMarkup\(state.activation\)/);assert.match(app,/numbers\('expert'/);assert.match(app,/data-numbers/);assert.match(app,/model=createMoeModel\(108,\{activation:state.activation\}\)/);
+ assert.match(app,/moeCostMarkup\(state\)/);assert.match(app,/expertProcessMarkup\(state.activation\)/);assert.match(app,/numbers\('expert'/);assert.match(app,/data-numbers/);assert.match(app,/transformer=createMoeTransformer\(\{activation:state.activation\}\)/);
 });

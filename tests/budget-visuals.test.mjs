@@ -15,8 +15,19 @@ test('symbolic formulas appear beside counts and explain the selected dimensions
  assert.equal(parameterFormulas(b.c,b.variants.swiglu).ffnTotal,'3df');
  assert.equal(parameterFormulas(b.c,b.variants.matched).ffnTotal,'3df′');
  const moe=parameterFormulas(b.c,b.variants.moe);assert.equal(moe.ffnTotal,'E × 3df + dE');assert.equal(moe.ffnActive,'k × 3df + dE');assert.equal(moe.projection,'Edf');
- const html=parameterDiagram(b,'moe');for(const label of ['d = 1,024','f = 4,096','Hq = 16 · Hkv = 16','dh = d/Hq = 64','dKV = Hkv × dh = 1024','E = 8 · k = 2','L = 24','= 4d²','= E × 3df + dE'])assert.ok(html.includes(label),label);
+ const html=parameterDiagram(b,'moe');for(const label of ['d = 1,024','f = 4,096','Hq = 16 · Hkv = 16','dh = d/Hq = 64','dKV = Hkv × dh = 1024','E = 8 · k = 2','L = 24','>4d²</code>','>E × 3df + dE</code>'])assert.ok(html.includes(label),label);
  assert.match(parameterDiagram(b,'matched'),/f′ = 2,752/);
  const gqa=architectureBudget({...BUDGET_DEFAULTS,kv:4}),f=parameterFormulas(gqa.c,gqa.variants.moe);assert.equal(f.attention,'2d² + 2d·dKV');assert.equal(f.kv,'d·dKV');assert.doesNotMatch(parameterDiagram(gqa,'moe'),/= 4d²/);
  const app=await readFile(new URL('../src/architecture-budget-app.mjs',import.meta.url),'utf8');assert.match(app,/budget-cell-formula/);assert.match(app,/cell\(a.ffnStored,f.ffn\)/);assert.match(app,/cell\(a.active,f.active/);
+});
+
+test('parameter totals lead with formulas, followed by smaller approximate numeric counts',async()=>{
+ for(const key of ['ordinary','swiglu','matched','moe']){
+  const html=parameterDiagram(b,key),totals=[...html.matchAll(/<p class="bv-total">([\s\S]*?)<\/p>/g)];
+  assert.equal(totals.length,2);
+  for(const [,total] of totals){assert.match(total,/^<code class="bv-total-formula">/);assert.ok(total.indexOf('bv-total-formula')<total.indexOf('bv-total-value'));assert.match(total,/≈ .* parameters<\/span>/);}
+ }
+ const css=await readFile(new URL('../analytics.css',import.meta.url),'utf8');
+ assert.match(css,/#parameter-diagram \.bv-total \.bv-total-formula\{font:500 30px/);
+ assert.match(css,/#parameter-diagram \.bv-total-value\{display:block;font:12px/);
 });

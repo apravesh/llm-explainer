@@ -20,10 +20,10 @@ export function parameterDiagram(b,key='ordinary'){
  return `<div class="bv-caption"><strong>One transformer block · ${names[key]}</strong><span>${count(a.stored)} stored parameters · ${count(a.active)} active per token</span></div>
  ${parameterLegend(c,a)}
  <div class="bv-block" data-visual-variant="${key}"><span class="bv-port">Token<br><b>h</b></span><span class="bv-arrow">→</span>
- <article class="bv-module"><h3>Self-attention</h3><p class="bv-total">${compact(a.attention)} <code class="bv-total-formula">= ${formula.attention}</code><small>${(100*a.attention/a.stored).toFixed(1)}% of block</small></p><p class="bv-step">Norm → Q/K/V projections</p>
+ <article class="bv-module"><h3>Self-attention</h3><p class="bv-total"><code class="bv-total-formula">${formula.attention}</code><span class="bv-total-value">≈ ${compact(a.attention)} parameters</span><small>${(100*a.attention/a.stored).toFixed(1)}% of block</small></p><p class="bv-step">Norm → Q/K/V projections</p>
  ${weight('WQ',`${c.d} × ${c.d}`,a.q,a.stored,'attn','d²')}${weight('WK',`${c.d} × ${a.dkv}`,a.key,a.stored,'attn',formula.kv)}${weight('WV',`${c.d} × ${a.dkv}`,a.value,a.stored,'attn',formula.kv)}
  <div class="bv-no-weights">QKᵀ → scale → softmax → × V<small>0 learned parameters here · still compute work</small></div>${weight('WO',`${c.d} × ${c.d}`,a.o,a.stored,'attn','d²')}<p class="bv-step">+ input residual →</p></article>
- <span class="bv-arrow">→</span><article class="bv-module bv-ffn"><h3>${names[key]}</h3><p class="bv-total">${compact(a.ffnStored+a.router)} <code class="bv-total-formula">= ${formula.ffnTotal}</code><small>${(100*(a.ffnStored+a.router)/a.stored).toFixed(1)}% of block</small></p>
+ <span class="bv-arrow">→</span><article class="bv-module bv-ffn"><h3>${names[key]}</h3><p class="bv-total"><code class="bv-total-formula">${formula.ffnTotal}</code><span class="bv-total-value">≈ ${compact(a.ffnStored+a.router)} parameters</span><small>${(100*(a.ffnStored+a.router)/a.stored).toFixed(1)}% of block</small></p>
  ${a.moe?`<div class="bv-router">${weight('Router',`${c.d} × ${c.experts}`,a.router,a.stored,'router','dE')}<small>Choose ${c.k} of ${c.experts} experts per token</small></div>`:''}
  <p class="bv-step">Norm → ${a.gated?'two parallel expansions':'expansion'}</p>
  ${weight(a.gated?'W₁ → SiLU':'W₁ → GELU',`${c.d} × ${a.f}${a.moe?` × ${expertCount} experts`:''}`,c.d*a.f*expertCount,a.stored,'ffn',formula.projection)}
