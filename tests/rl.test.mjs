@@ -49,5 +49,26 @@ test('RL chapter replaces placeholders and all local navigation/assets resolve',
  assert.match(html,/three trainable logits/i);assert.match(html,/β = 0/);assert.match(html,/not a GRPO requirement/);assert.match(html,/not files or a production deployment/);assert.match(html,/not a hard bound/);
 });
 test('RL autoplay is finite and cancels stale callbacks on reset, visibility and motion changes',async()=>{
- const app=await readFile(new URL('../src/rl-app.mjs',import.meta.url),'utf8');assert.match(app,/ticket!==epoch\|\|!playing/);assert.match(app,/clearTimeout\(timer\)/);assert.match(app,/if\(state.phase===7\)\{cancel\(\);render\(\);return;/);assert.match(app,/visibilitychange/);assert.match(app,/prefers-reduced-motion/);assert.match(app,/inferenceSeed=981/);assert.match(app,/servingVersion=\+e.target.value/);
+ const app=await readFile(new URL('../src/rl-app.mjs',import.meta.url),'utf8');assert.match(app,/ticket!==epoch\|\|!playing/);assert.match(app,/clearTimeout\(timer\)/);assert.match(app,/if\(state.phase===lastPhase\(\)\)\{cancel\(\);render\(\);return;/);assert.match(app,/grpo:\{last:7/);assert.match(app,/visibilitychange/);assert.match(app,/prefers-reduced-motion/);assert.match(app,/inferenceSeed=981/);assert.match(app,/servingVersion=\+e.target.value/);
+});
+test('REINFORCE: mean-baseline gradient matches finite differences and one update per group raises p(4)',async()=>{
+ const m=await import('../src/rl-engine.mjs');let s=m.initialReinforceState();for(let i=0;i<3;i++)s=m.advanceReinforce(s);
+ const {samples,stats}=s.group,g=m.reinforceObjective(s.learner,samples,stats.advantages),eps=1e-6;
+ assert.ok(Math.abs(stats.advantages.reduce((a,b)=>a+b,0))<1e-12);
+ for(let j=0;j<3;j++){const a=[...s.learner],b=[...s.learner];a[j]+=eps;b[j]-=eps;const num=(m.reinforceObjective(a,samples,stats.advantages).loss-m.reinforceObjective(b,samples,stats.advantages).loss)/(2*eps);assert.ok(Math.abs(num-g.gradient[j])<1e-6);}
+ const before=m.probabilities(s.learner)[1];s=m.advanceReinforce(s);assert.equal(s.phase,4);assert.equal(s.updates,1);assert.equal(s.snapshots.length,2);assert.deepEqual(s.sampler,s.learner);
+ for(let i=0;i<40;i++)s=m.advanceReinforce(s);assert.ok(m.probabilities(s.learner)[1]>before+.2);
+ let flat=m.initialReinforceState('constant');for(let i=0;i<8;i++)flat=m.advanceReinforce(flat);assert.deepEqual(flat.learner,[0,0,0]);
+});
+test('DPO: margin starts at zero, gradient matches finite differences, reference stays frozen and loss falls',async()=>{
+ const m=await import('../src/rl-engine.mjs'),ref=[0,0,0],theta=[.3,-.2,.1],g=m.dpoObjective(theta,ref),eps=1e-6;
+ assert.ok(m.dpoObjective(ref,ref).terms.every(t=>Math.abs(t.margin)<1e-12&&Math.abs(t.loss-Math.log(2))<1e-12));
+ for(let j=0;j<3;j++){const a=[...theta],b=[...theta];a[j]+=eps;b[j]-=eps;assert.ok(Math.abs((m.dpoObjective(a,ref).loss-m.dpoObjective(b,ref).loss)/(2*eps)-g.gradient[j])<1e-6);}
+ let s=m.initialDpoState();const losses=[];for(let i=0;i<24;i++){s=m.advanceDpo(s);if(s.phase===4)losses.push(s.lastUpdate.before.loss);}
+ assert.deepEqual(s.sampler,[0,0,0]);assert.ok(losses.every((l,i)=>i===0||l<losses[i-1]));assert.ok(m.probabilities(s.learner)[1]>.8);assert.throws(()=>m.dpoObjective(theta,ref,[{chosen:1,rejected:1}]));
+});
+test('RL page offers REINFORCE first, then GRPO and DPO, each with its own math',async()=>{
+ const html=await readFile(new URL('../post-training-rl.html',import.meta.url),'utf8');
+ assert.deepEqual([...html.matchAll(/data-rl-algo="(\w+)"/g)].map(x=>x[1]),['reinforce','grpo','dpo']);assert.match(html,/data-rl-algo="reinforce" aria-pressed="true"/);
+ for(const key of ['reinforce','grpo','dpo'])assert.ok(html.includes(`data-only="${key}"`));assert.match(html,/Direct Preference Optimization/);
 });

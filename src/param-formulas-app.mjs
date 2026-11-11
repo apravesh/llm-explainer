@@ -1,7 +1,8 @@
-import {PF_DEFAULTS, PF_CATEGORIES, parameterFormulas, compactCount} from './param-formulas.mjs';
+import {PF_DEFAULTS, PF_CATEGORIES, PF_PRESETS, parameterFormulas, compactCount, unitText} from './param-formulas.mjs';
 
 const root = document.getElementById('formula-models');
 const state = {...PF_DEFAULTS};
+let preset = 'toy';
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let focusCat = null;
 
@@ -21,27 +22,30 @@ const pctText = v => v >= 10 ? `${v.toFixed(0)}%` : v >= 1 ? `${v.toFixed(1)}%` 
 // A weight matrix drawn to scale: each grid cell is one d × d square (d² weights).
 const tile = (w, h, label, cls, title = label) => `<span class="pf-tile ${cls}" style="--w:${w};--h:${h}" title="${title}"><em>${label}</em></span>`;
 
-function attentionTiles() {
- return `<div class="pf-qkvo">${['Q', 'K', 'V', 'O'].map(n => tile(1, 1, `W<sub>${n}</sub>`, 'attn', `W_${n}: d × d`)).join('')}</div>`;
+function attentionTiles(c) {
+ const r = c.dkv / c.d, kv = r === 1 ? 'd × d' : 'd × d_kv';
+ return `<div class="pf-qkvo${r === 1 ? '' : ' gqa'}">${[['Q', 1], ['K', r], ['V', r], ['O', 1]].map(([n, w]) => tile(w, 1, w >= .5 ? `W<sub>${n}</sub>` : '', 'attn', `W_${n}: ${n === 'K' || n === 'V' ? kv : 'd × d'}`)).join('')}</div>${r === 1 ? '' : `<span class="pf-caption">W<sub>K</sub>, W<sub>V</sub> are d × ${unitText(r)}d · shared KV heads</span>`}`;
 }
-function mlpTiles(cls = 'mlp') {
- return `<div class="pf-mlp-tiles">${tile(4, 1, '', cls, 'W_in: d × 4d')}${tile(4, 1, '', cls, 'W_out: 4d × d')}</div><span class="pf-caption">W<sub>in</sub> d×4d · W<sub>out</sub> 4d×d</span>`;
+function mlpTiles(c, cls = 'mlp') {
+ const w = c.f / c.d, names = c.mats === 3 ? ['W₁', 'W₃', 'W₂'] : ['W_in', 'W_out'];
+ return `<div class="pf-mlp-tiles">${names.map(n => tile(w, 1, '', cls, `${n}: d × f, f = ${unitText(w)}d`)).join('')}</div><span class="pf-caption">${c.mats} matrices of d × f · f = ${unitText(w)}d${c.mats === 3 ? ' · SwiGLU' : ''}</span>`;
 }
 
 function blockDiagram(r) {
- const {config: c} = r;
+ const {config: c} = r, a = unitText(r.blockUnits.attn), m = unitText(r.expertUnits);
+ const attnFormula = c.dkv === c.d ? '4 · d²' : `2d² + 2·d·d_kv = ${a}d²`;
  let ffn;
  if (c.model === 'moe') {
-  const experts = Array.from({length: c.E}, (_, i) => `<span class="pf-expert${i < c.k ? ' on' : ''}" title="Expert ${i + 1}: 8d²${i < c.k ? ' · active for this token' : ' · stored, idle for this token'}"><i></i><i></i></span>`).join('');
+  const experts = Array.from({length: c.E}, (_, i) => `<span class="pf-expert${i < c.k ? ' on' : ''}" title="Expert ${i + 1}: ${m}d²${i < c.k ? ' · active for this token' : ' · stored, idle for this token'}">${'<i></i>'.repeat(c.mats)}</span>`).join('');
   ffn = `<div data-cat="mlp" class="pf-node mlp moe"><b>Router + ${c.E} experts</b>
    <div class="pf-router" data-cat="router">${tile(Math.max(.25, c.E / 16), 1, '', 'router', 'Router W_r: d × E')}<small>Router d × E · tiny</small></div>
    <div class="pf-experts" style="--cols:${Math.min(c.E, 4)}">${experts}</div>
-   <code>E · 8d² stored</code><code class="pf-active">k · 8d² run per token</code></div>`;
- } else ffn = `<div data-cat="mlp" class="pf-node mlp"><b>MLP</b>${mlpTiles()}<code>2 · d · 4d = 8d²</code></div>`;
+   <code>E · ${m}d² stored</code><code class="pf-active">k · ${m}d² run per token</code></div>`;
+ } else ffn = `<div data-cat="mlp" class="pf-node mlp"><b>MLP</b>${mlpTiles(c)}<code>${c.mats} · d · f = ${m}d²</code></div>`;
  return `<div class="pf-block"><span class="pf-repeat">× L = ${c.L} blocks</span>
   <div class="pf-row">
    <div data-cat="norm" class="pf-node norm"><b>Norm</b>${tile(1, .14, '', 'norm', 'gain vector: d')}<code>d</code></div>
-   <div data-cat="attn" class="pf-node attn"><b>Attention</b>${attentionTiles()}<code>4 · d²</code></div>
+   <div data-cat="attn" class="pf-node attn"><b>Attention</b>${attentionTiles(c)}<code>${attnFormula}</code></div>
    <div data-cat="norm" class="pf-node norm"><b>Norm</b>${tile(1, .14, '', 'norm', 'gain vector: d')}<code>d</code></div>
    ${ffn}
   </div>
@@ -68,7 +72,7 @@ function diagram(r) {
   <div data-cat="vision" class="pf-node vision wide"><b>Projector → LLM width D = ${c.Dmul}d</b><div class="pf-proj">${tile(c.Dmul, 1, '', 'vision', 'd × D')}${tile(c.Dmul, c.Dmul, '', 'vision', 'D × D')}</div><span class="pf-caption">W₁ d×D · W₂ D×D</span><code>d·D + D·D = ${c.Dmul}d² + ${c.Dmul * c.Dmul}d²</code></div>${down}
   <div data-cat="io" class="pf-node io"><b>Image tokens for the language model</b></div>`;
  }
- return `${embeddingNode(c, 'Token embedding', 'V · d', `one d-vector per vocabulary entry · V/d = ${(c.V / c.d).toFixed(1)} squares`)}${down}
+ return `${embeddingNode(c, 'Token embedding', 'V · d', `one d-vector per vocabulary entry · V/d = ${(c.V / c.d).toFixed(1)} squares`)}${c.pos > 0 ? `${down}<div data-cat="embed" class="pf-node embed wide"><b>Learned positions</b><div class="pf-strip">${tile(Math.min(c.pos / c.d, 9), 1, '', 'embed', `n_ctx × d = ${(c.pos / c.d).toFixed(2)} d×d squares`)}</div><code>n_ctx · d</code><small>one d-vector per position · n_ctx = ${c.pos.toLocaleString()}</small></div>` : ''}${down}
  ${blockDiagram(r)}${down}
  <div data-cat="norm" class="pf-node norm wide"><b>Final norm</b><code>d</code></div>${down}
  ${c.tied ? `<div data-cat="embed" class="pf-node embed wide tied"><b>LM head</b><code>tied: reuses the V · d embedding</code></div>` : embeddingNode(c, 'LM head', 'd · V', 'scores every vocabulary entry')}`;
@@ -84,20 +88,20 @@ function bar(r, which) {
 }
 
 function blockSplit(r) {
- const c = r.config;
+ const c = r.config, u = r.blockUnits, a = unitText(u.attn), m = unitText(r.expertUnits), dense = u.attn + r.expertUnits;
  if (c.model === 'moe') {
-  const stored = 4 + 8 * c.E, active = 4 + 8 * c.k;
-  return `<div class="pf-split"><div><span class="pf-eq">4d² + <i>E</i>·8d² = ${stored}d²</span><small>stored per block</small></div><div><span class="pf-eq">4d² + <i>k</i>·8d² = ${active}d²</span><small>run per token</small></div></div>
-  <p class="pf-insight">With E = ${c.E} and k = ${c.k}, a block <strong>stores ${(stored / 12).toFixed(1)}×</strong> the weights of a dense block but each token <strong>runs only ${(active / 12).toFixed(1)}×</strong>. Attention falls to ${pctText(pct(4, stored))} of stored block weights.</p>`;
+  const stored = u.attn + u.mlp, active = u.attn + u.mlpActive;
+  return `<div class="pf-split"><div><span class="pf-eq">${a}d² + <i>E</i>·${m}d² = ${unitText(stored)}d²</span><small>stored per block</small></div><div><span class="pf-eq">${a}d² + <i>k</i>·${m}d² = ${unitText(active)}d²</span><small>run per token</small></div></div>
+  <p class="pf-insight">With E = ${c.E} and k = ${c.k}, a block <strong>stores ${(stored / dense).toFixed(1)}×</strong> the weights of a dense block but each token <strong>runs only ${(active / dense).toFixed(1)}×</strong>. Attention falls to ${pctText(pct(u.attn, stored))} of stored block weights.</p>`;
  }
- return `<div class="pf-split"><div><span class="pf-eq"><span class="c-attn">4d²</span> + <span class="c-mlp">8d²</span> = 12d²</span><small>one block</small></div><div class="pf-mini-bar"><span class="pf-seg attn" data-cat="attn" style="flex-grow:4">1/3 attention</span><span class="pf-seg mlp" data-cat="mlp" style="flex-grow:8">2/3 MLP</span></div></div>`;
+ return `<div class="pf-split"><div><span class="pf-eq"><span class="c-attn">${a}d²</span> + <span class="c-mlp">${m}d²</span> = ${unitText(dense)}d²</span><small>one block</small></div><div class="pf-mini-bar"><span class="pf-seg attn" data-cat="attn" style="flex-grow:${u.attn}">${pctText(pct(u.attn, dense))} attention</span><span class="pf-seg mlp" data-cat="mlp" style="flex-grow:${u.mlp}">${pctText(pct(u.mlp, dense))} MLP</span></div></div>`;
 }
 
 function insight(r) {
  const c = r.config;
  if (c.model === 'vision') {
   const proj = r.byCat.vision.stored, blocks = r.byCat.attn.stored + r.byCat.mlp.stored;
-  return `No vocabulary, so no V · d tables. The patch embedding is small (3p² · d). The projector, ${c.Dmul}d² + ${c.Dmul * c.Dmul}d² = ${c.Dmul + c.Dmul * c.Dmul}d², weighs as much as ${((c.Dmul + c.Dmul * c.Dmul) / 12).toFixed(1)} encoder blocks — ${pctText(pct(proj, r.stored))} of this encoder. Blocks hold ${pctText(pct(blocks, r.stored))}.`;
+  return `No vocabulary, so no V · d tables. The patch embedding is small (3p² · d). The projector, ${c.Dmul}d² + ${c.Dmul * c.Dmul}d² = ${c.Dmul + c.Dmul * c.Dmul}d², weighs as much as ${((c.Dmul + c.Dmul * c.Dmul) / (r.blockUnits.attn + r.expertUnits)).toFixed(1)} encoder blocks — ${pctText(pct(proj, r.stored))} of this encoder. Blocks hold ${pctText(pct(blocks, r.stored))}.`;
  }
  const emb = r.byCat.embed.stored;
  return `Embeddings scale with V · d, blocks with L · d². Here V · d${c.tied ? '' : ' (×2)'} is ${pctText(pct(emb, r.stored))} of the ${c.model === 'moe' ? 'stored ' : ''}model. Shrink d or L, or grow V, and the vocabulary tables take over — that is why small models often tie the embedding and LM head.`;
@@ -108,17 +112,24 @@ function table(r) {
 }
 
 function controls() {
- const c = state, opt = (vals, cur, fmt = v => v) => vals.map(v => `<option value="${v}"${String(v) === String(cur) ? ' selected' : ''}>${fmt(v)}</option>`).join('');
- const llm = c.model !== 'vision';
- return `<label>Width d<select data-pf="d">${opt([64, 128, 256, 512, 1024], c.d)}</select></label>
- <label>Blocks L <output>${c.L}</output><input data-pf="L" type="range" min="1" max="32" value="${c.L}"></label>
- ${llm ? `<label>Vocabulary V<select data-pf="V">${opt([1000, 8000, 32000], c.V, v => v.toLocaleString())}</select></label><label class="pf-check"><input type="checkbox" data-pf="tied"${c.tied ? ' checked' : ''}> Tie embedding &amp; LM head</label>` : `<label>LLM width D<select data-pf="Dmul">${opt([2, 4, 5], c.Dmul, v => `${v}d`)}</select></label>`}
+ const c = state, opt = (vals, cur, fmt = v => v) => [...new Set([...vals, cur])].sort((x, y) => x - y).map(v => `<option value="${v}"${String(v) === String(cur) ? ' selected' : ''}>${fmt(v)}</option>`).join('');
+ const llm = c.model !== 'vision', num = v => Number(v).toLocaleString();
+ return `<label>Width d<select data-pf="d">${opt([64, 128, 256, 512, 768, 1024, 4096], c.d, num)}</select></label>
+ <label>Blocks L <output>${c.L}</output><input data-pf="L" type="range" min="1" max="48" value="${c.L}"></label>
+ ${llm ? `<label>Vocabulary V<select data-pf="V">${opt([1000, 8000, 32000, 50257, 128256], c.V, num)}</select></label><label class="pf-check"><input type="checkbox" data-pf="tied"${c.tied ? ' checked' : ''}> Tie embedding &amp; LM head</label>` : `<label>LLM width D<select data-pf="Dmul">${opt([2, 4, 5], c.Dmul, v => `${v}d`)}</select></label>`}
+ <label>MLP<select data-pf="mlp"><option value="gelu"${c.mlp === 'gelu' ? ' selected' : ''}>GELU · 2 matrices</option><option value="swiglu"${c.mlp === 'swiglu' ? ' selected' : ''}>SwiGLU · 3 matrices</option></select></label>
+ <label>MLP width f<select data-pf="fr">${opt([2.6667, 3.5, 4], c.fr, v => `${unitText(v)}d`)}</select></label>
+ <label>Attention<select data-pf="kvRatio">${opt([.25, 1], c.kvRatio, v => v === 1 ? 'Full multi-head' : `GQA · KV width ${unitText(v)}d`)}</select></label>
  ${c.model === 'moe' ? `<label>Experts E <output>${c.E}</output><input data-pf="E" type="range" min="2" max="16" value="${c.E}"></label><label>Active k <output>${c.k}</output><input data-pf="k" type="range" min="1" max="${Math.min(4, c.E)}" value="${Math.min(c.k, c.E)}"></label>` : ''}`;
+}
+function presetBar() {
+ return `<label>Real model<select id="pf-preset">${Object.entries(PF_PRESETS).map(([key, p]) => `<option value="${key}"${key === preset ? ' selected' : ''}>${p.label}</option>`).join('')}${preset === 'custom' ? '<option value="custom" selected>Custom</option>' : ''}</select></label><span>${preset === 'custom' ? 'Your own mix of dimensions.' : PF_PRESETS[preset].note}</span>`;
 }
 
 function render(withControls = true) {
  const r = parameterFormulas(state);
  root.querySelectorAll('[data-pf-model]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pfModel === state.model)));
+ root.querySelector('#pf-presets').innerHTML = presetBar();
  if (withControls) root.querySelector('#pf-controls').innerHTML = controls();
  const diagramEl = root.querySelector('#pf-diagram');
  diagramEl.innerHTML = keyChip(r.config) + diagram(r);
@@ -131,7 +142,11 @@ function render(withControls = true) {
 }
 
 if (root) {
- root.addEventListener('click', e => { const b = e.target.closest('[data-pf-model]'); if (b) { state.model = b.dataset.pfModel; render(); } });
+ root.addEventListener('click', e => { const b = e.target.closest('[data-pf-model]'); if (b) { state.model = b.dataset.pfModel; preset = 'custom'; render(); } });
+ root.addEventListener('change', e => {
+  if (e.target.id !== 'pf-preset' || !PF_PRESETS[e.target.value]) return;
+  preset = e.target.value; Object.assign(state, PF_DEFAULTS, PF_PRESETS[preset].config); render();
+ });
  const catOf = e => e.target.closest?.('[data-cat]')?.dataset.cat || null;
  root.addEventListener('pointerover', e => setFocus(catOf(e)));
  root.addEventListener('pointerleave', () => setFocus(null));
@@ -139,7 +154,8 @@ if (root) {
  root.addEventListener('focusout', e => { if (!root.contains(e.relatedTarget)) setFocus(null); });
  root.addEventListener('input', e => {
   const key = e.target.dataset?.pf; if (!key) return;
-  state[key] = e.target.type === 'checkbox' ? e.target.checked : Number(e.target.value);
+  state[key] = e.target.type === 'checkbox' ? e.target.checked : key === 'mlp' ? e.target.value : Number(e.target.value);
+  preset = 'custom';
   if (e.target.type === 'range') e.target.previousElementSibling.textContent = e.target.value;
   if (key === 'E') {
    const kInput = root.querySelector('[data-pf="k"]');

@@ -1,0 +1,53 @@
+/* One header for every page: same brand, same chapter links, same place. */
+.site-bar{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:14px 28px;width:100%;max-width:none;margin:0;padding:0 32px;min-height:60px;border-bottom:1px solid #e4e8ed;background:#ffffffb8;font:500 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;color:#687585;letter-spacing:0}
+.site-bar *{box-sizing:border-box}
+.site-bar a{color:inherit;text-decoration:none}
+.site-bar .site-brand{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:650;letter-spacing:1.4px;color:#232e3a;white-space:nowrap;flex-shrink:0}
+.site-bar .site-brand span{font:500 17px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:-2px;color:#3667e4}
+.site-bar nav{all:unset;display:flex;align-items:center;gap:18px;margin-left:auto;min-width:0;overflow-x:auto;scrollbar-width:none;white-space:nowrap;padding:4px 2px}
+.site-bar nav::-webkit-scrollbar{display:none}
+.site-bar nav a{padding:5px 0;border-bottom:2px solid transparent;font-size:12px;font-weight:500;display:inline;color:#687585}
+.site-bar nav a:hover{color:#232e3a}
+.site-bar nav a[aria-current=page]{color:#232e3a;font-weight:650;border-bottom-color:#3667e4}
+.site-bar .nav-group{font:500 9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.2px;text-transform:uppercase;color:#9aa4b0;padding-left:18px;border-left:1px solid #e4e8ed}
+.site-bar a:focus-visible{outline:3px solid #97b4ff;outline-offset:3px;border-radius:3px}
+.page-links{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;margin-top:16px;font-size:12px}
+.page-links span{font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.2px;color:#9aa4b0}
+.page-links a{color:#5b7fc7;text-decoration:none}.page-links a:hover{text-decoration:underline}
+.page-links button{all:unset;box-sizing:border-box;cursor:pointer;font-size:11px;font-weight:500;color:#687585;border:1px solid #d9e0ea;border-radius:14px;padding:3px 11px;background:#fff}.page-links button:hover{color:#232e3a;border-color:#aab8cc}.page-links button:focus-visible{outline:3px solid #97b4ff;outline-offset:3px}
+@media(max-width:900px){.site-bar{flex-wrap:wrap;padding-block:12px 6px;gap:6px 14px}.site-bar nav{order:3;width:100%;margin-left:0;gap:15px}.site-bar .nav-group{padding-left:14px}}
+
+/* ---------- One content column for every page (Vision's width) ---------- */
+.site-bar{padding-inline:max(clamp(16px,4.6vw,64px),calc((100% - 1280px)/2))}
+main:not(.full-bleed):not(#top),.journal-shell,.reading,body>footer{max-width:none;margin-inline:0;padding-inline:max(clamp(16px,4.6vw,64px),calc((100% - 1280px)/2))}
+
+.journal-shell main:not(.full-bleed):not(#top){padding-inline:0}
+
+/* ---------- One title style for every page (MoE's type) ---------- */
+.intro h1,.training-intro h1,.journal-intro h1{font:500 clamp(32px,3.4vw,45px)/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-1.3px;margin:12px 0 0;color:#293647}
+.intro h1 em,.training-intro h1 em,.journal-intro h1 em{font:italic 400 1.05em Georgia,"Times New Roman",serif;color:#6681b5;letter-spacing:inherit}
+.eyebrow{font:400 9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.4px;color:#8a9bb1}
+.intro p:not(.eyebrow):not(.page-links),.training-intro>p:not(.eyebrow):not(.page-links),.intro-copy{font-size:13px;line-height:1.8;color:#8796aa;max-width:630px;margin-top:15px}
+.section-heading h2,.takeaways h2,.chapter-next h2{font:500 28px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.7px;color:#4b6586;margin:9px 0 0}
+.section-heading h2 em{font:italic 400 1.05em Georgia,"Times New Roman",serif;color:#6681b5}
+.section-heading>p:not(.eyebrow),.section-heading p:not(.eyebrow){font-size:12px;line-height:1.8;color:#8b9cb3;margin-top:10px}
+.training-intro{max-width:none}
+@media(max-width:650px){.intro h1,.training-intro h1,.journal-intro h1{font-size:31px;letter-spacing:-.8px}.eyebrow{font-size:8px;letter-spacing:.9px}.section-heading h2,.takeaways h2,.chapter-next h2{font-size:24px}.intro p:not(.eyebrow):not(.page-links),.training-intro>p:not(.eyebrow),.intro-copy{font-size:12px}}
+
+/* ---------- MoE's text rendering everywhere: system sans, antialiased, slate-blue greys, medium weights ---------- */
+:root{--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--ink:#293647;--muted:#8493a6;--line:#e2e8f0;--border:#e2e8f0;--rule:#e2e8f0}
+html body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.6;color:#293647;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body h3{font-weight:500;color:#6582a6}
+.chapter-copy h3{font-weight:500;color:#293647}
+.lab-top>strong{font-weight:500;color:#4b6586}
+.list-heading h2,#chapters-title,#training-title{font-weight:500;color:#4b6586}
+.pf-switch button[aria-pressed=true],.pipe-steps button[aria-pressed=true]{font-weight:500}
+
+/* ---------- One title block for every page (MoE's spacing) ---------- */
+.intro,.training-intro,.journal-intro{padding:46px 0 33px;border-bottom:0}
+.intro .eyebrow{display:block}.intro .tiny-line{display:none}
+.intro .eyebrow,.training-intro .eyebrow,.journal-intro .eyebrow{margin:0}
+.intro p:not(.eyebrow):not(.page-links),.training-intro>p:not(.eyebrow):not(.page-links),.intro-copy{margin:15px 0 0}
+.intro .page-links,.training-intro .page-links,.journal-intro .page-links,.moe-intro .page-links{margin:16px 0 0;min-height:26px;line-height:1.6;font-size:12px}
+@media(max-width:940px){.intro,.training-intro,.journal-intro{padding-top:35px}}
+@media(max-width:650px){.intro,.training-intro,.journal-intro{padding:30px 0 25px}}

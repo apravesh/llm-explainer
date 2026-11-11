@@ -7,20 +7,18 @@
   <meta name="theme-color" content="#faf9f6">
   <title>LLM Explainer — Notes on language models</title>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="journal.css">
+  <link rel="stylesheet" href="journal.css"><link rel="stylesheet" href="site-header.css">
 </head>
 <body>
   <a class="skip-link" href="#chapters">Skip to chapters</a>
+  <header class="site-bar"><a class="site-brand" href="./" aria-label="LLM Explainer home"><span aria-hidden="true">[ ]</span> LLM EXPLAINER</a><nav aria-label="Chapters"><a href="./" aria-current="page">All chapters</a><span class="nav-group">Architecture</span><a href="vision.html">Vision</a><a href="moe.html">MoE</a><a href="analytics.html">Parameters</a><span class="nav-group">Training</span><a href="pretraining.html">Pretraining</a><a href="post-training-instruct.html">Instruct</a><a href="post-training-rl.html">RL</a></nav></header>
   <div class="journal-shell">
-    <header class="journal-header">
-      <a class="journal-brand" href="./" aria-label="LLM Explainer home"><span class="journal-mark" aria-hidden="true">[ ]</span> LLM EXPLAINER</a>
-      <span class="header-note">A growing notebook</span>
-    </header>
     <main>
       <section class="journal-intro" aria-labelledby="page-title">
         <p class="eyebrow">LEARN BY LOOKING INSIDE</p>
         <h1 id="page-title">Notes on<br><em>language models.</em></h1>
         <p class="intro-copy">A place to understand how language models work, one idea at a time. Visual explanations, interactive experiments, and a little math along the way.</p>
+        <p class="page-links"><span>ON THIS PAGE</span><a href="#chapters">Architecture</a><a href="#training">Training</a></p>
       </section>
       <section id="chapters" aria-labelledby="chapters-title">
         <div class="list-heading"><h2 id="chapters-title">Architecture</h2><span>HOW MODELS ARE BUILT</span></div>
@@ -52,7 +50,7 @@
       <section id="training" class="chapter-group" aria-labelledby="training-title"><div class="list-heading"><h2 id="training-title">Training</h2><span>HOW MODELS LEARN</span></div><ol class="chapter-list">
         <li><a class="chapter-link" href="pretraining.html"><span class="chapter-number" aria-hidden="true">01</span><div class="chapter-copy"><p class="chapter-kicker">FROM TEXT TO WEIGHTS</p><h3>Pretraining</h3><p>Prepare a corpus, build a BPE tokenizer, and follow a tiny transformer through batch loss and backpropagation.</p><span class="chapter-meta">Interactive chapter · Data, tokens &amp; learning</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
         <li><a class="chapter-link" href="post-training-instruct.html"><span class="chapter-number" aria-hidden="true">02</span><div class="chapter-copy"><p class="chapter-kicker">LEARNING FROM DEMONSTRATIONS</p><h3>Post-training (Instruct)</h3><p>Explore chat tokens, curated demonstrations and how supervised fine-tuning learns from assistant responses.</p><span class="chapter-meta">Interactive chapter · Chat formatting &amp; SFT</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
-        <li><a class="chapter-link" href="post-training-rl.html"><span class="chapter-number" aria-hidden="true">03</span><div class="chapter-copy"><p class="chapter-kicker">LEARNING FROM FEEDBACK</p><h3>Post-training (RL)</h3><p>Follow a GRPO loop from sampled answers and rewards to policy updates, checkpoint refreshes and inference.</p><span class="chapter-meta">Interactive chapter · GRPO &amp; checkpoints</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+        <li><a class="chapter-link" href="post-training-rl.html"><span class="chapter-number" aria-hidden="true">03</span><div class="chapter-copy"><p class="chapter-kicker">LEARNING FROM FEEDBACK</p><h3>Post-training (RL)</h3><p>Watch a model learn from its own answers with REINFORCE, then see what GRPO and DPO add, and try inference from saved checkpoints.</p><span class="chapter-meta">Interactive chapter · REINFORCE, GRPO &amp; DPO</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
       </ol></section>
       <p class="notebook-note">Just the beginning. More explanations and experiments to come.</p>
     </main>

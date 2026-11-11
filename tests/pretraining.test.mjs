@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile,access} from 'node:fs/promises';
-import {CRAWL_EXAMPLE,exampleCorpus,corpusView} from '../src/pretraining-data.mjs';
-import {BPE_WORDS,bpeTrace,encodeBpe,mergePair,pairCounts} from '../src/pretraining-bpe.mjs';
+import {CRAWL_EXAMPLE,exampleCorpus,corpusView,htmlSegments,extractText,corpusTape,DOCUMENT_SEPARATOR} from '../src/pretraining-data.mjs';
+import {BPE_WORDS,bpeTrace,encodeBpe,mergePair,pairCounts,encodeSteps,pairOccurrences} from '../src/pretraining-bpe.mjs';
 import {PRETRAIN_BATCH,PRETRAIN_VOCAB,createPretrainModel,pretrainForward,pretrainStep,applyPretrainSgd} from '../src/pretraining-engine.mjs';
 const near=(a,b,t=1e-7)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 test('illustrative corpus filters sources/quality, deduplicates before splitting and never trains on held out data',()=>{
@@ -49,5 +49,18 @@ test('architecture grouping remains intact and training has its own three pages'
  const html=await read('pretraining.html');for(const id of ['data','tokenizer','learn','train-batch','train-next','bpe-next','corpus-documents'])assert.ok(html.includes(`id="${id}"`));assert.match(html,/separate from the BPE demo/);assert.match(html,/not generalization/);assert.match(html,/not a pretrained LLM/);
 });
 test('UI keeps forward snapshots fixed during an update and cancels stale automatic timers',async()=>{
- const app=await readFile(new URL('../src/pretraining-app.mjs',import.meta.url),'utf8');assert.match(app,/strip\(trace.embedding,'Embedding lookup, before update'\)/);assert.match(app,/if\(ticket!==epoch\|\|!playing\)return/);assert.match(app,/clearTimeout\(timer\)/);assert.match(app,/if\(phase===4\)\{model=applyPretrainSgd/);assert.match(app,/document.hidden/);assert.match(app,/prefers-reduced-motion/);
+ const app=await readFile(new URL('../src/pretraining-app.mjs',import.meta.url),'utf8');assert.match(app,/strip\(trace.embedding,'Embedding lookup, before update'\)/);assert.match(app,/if\(ticket!==epoch\|\|!playing\)return/);assert.match(app,/clearTimeout\(timer\)/);assert.match(app,/if\(phase===4\)\{previousModel=model;model=applyPretrainSgd/);assert.match(app,/document.hidden/);assert.match(app,/prefers-reduced-motion/);
+});
+test('HTML segments rebuild the page exactly; only main text survives extraction',()=>{
+ for(const r of CRAWL_EXAMPLE){const segs=htmlSegments(r.html);assert.equal(segs.map(s=>s.text).join(''),r.html);assert.ok(segs.every(s=>['tag','boilerplate','content'].includes(s.kind)));assert.ok(segs.filter(s=>s.kind==='tag').every(s=>/^<[^>]*>$/.test(s.text)));assert.ok(!extractText(r.html).includes('<'));}
+ const a=htmlSegments(CRAWL_EXAMPLE[0].html);assert.deepEqual(a.filter(s=>s.kind==='content').map(s=>s.text),['The cat sat on the mat.']);assert.ok(a.some(s=>s.kind==='boilerplate'&&s.text.includes('track(')));assert.ok(a.some(s=>s.kind==='boilerplate'&&s.text.includes('Cookie')));
+});
+test('the corpus is one separator-joined string; validation text never appears in the training string',()=>{
+ const t=corpusTape(),c=exampleCorpus();assert.equal(t.train,c.train.map(r=>r.text+DOCUMENT_SEPARATOR).join(''));assert.equal(t.validation,c.validation[0].text+DOCUMENT_SEPARATOR);assert.ok(!t.train.includes(c.validation[0].text));
+ assert.deepEqual(t.docs.filter(d=>d.split==='train').map(d=>d.shard),[1,1,2]);assert.equal(t.htmlChars,CRAWL_EXAMPLE.reduce((n,r)=>n+r.html.length,0));assert.ok(t.train.length<t.htmlChars);
+});
+test('encoding steps replay only the rules that fire and end at the encoder result; pair occurrences match the merge',()=>{
+ const t=bpeTrace(8);for(const word of ['lowest','slowest','wildest','newer']){const steps=encodeSteps(word,t);assert.deepEqual(steps[0].tokens,[...word,'</w>']);assert.deepEqual(steps.at(-1).tokens,encodeBpe(word,t).tokens);for(let i=1;i<steps.length;i++){assert.ok(steps[i].tokens.length<steps[i-1].tokens.length);assert.ok(steps[i].rule>steps[i-1].rule||steps[i-1].rule===null);}}
+ assert.throws(()=>encodeSteps('zoo',t));assert.deepEqual(pairOccurrences(['a','a','a','a','a'],['a','a']),[0,2]);
+ for(const w of bpeTrace(0).words)assert.equal(mergePair(w.tokens,['e','s']).length,w.tokens.length-pairOccurrences(w.tokens,['e','s']).length);
 });

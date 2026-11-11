@@ -4,17 +4,14 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Explore how a vision transformer turns pixels into contextual patch representations. A hands-on guide to ViT, Pixtral, attention, and 2D RoPE.">
   <meta name="theme-color" content="#f8f9fb"><title>Vision Encoder Explainer — From pixels to understanding</title>
-  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="site-header.css">
 </head>
 <body>
 <a class="skip" href="#explorer">Skip to interactive explorer</a>
-<header class="site-header">
-  <a class="brand" href="./" aria-label="LLM Explainer home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>VISION<span class="brand-light">EXPLAINER</span></a>
-  <nav aria-label="Main navigation"><a class="previous" href="./">← All chapters</a><a href="#rope-lab">2D RoPE lab</a><a href="#comparison">ViT vs. Pixtral</a><button class="text-button" id="about-open">About <span aria-hidden="true">↗</span></button></nav>
-</header>
+<header class="site-bar"><a class="site-brand" href="./" aria-label="LLM Explainer home"><span aria-hidden="true">[ ]</span> LLM EXPLAINER</a><nav aria-label="Chapters"><a href="./">All chapters</a><span class="nav-group">Architecture</span><a href="vision.html" aria-current="page">Vision</a><a href="moe.html">MoE</a><a href="analytics.html">Parameters</a><span class="nav-group">Training</span><a href="pretraining.html">Pretraining</a><a href="post-training-instruct.html">Instruct</a><a href="post-training-rl.html">RL</a></nav></header><script>(()=>{const n=document.querySelector(".site-bar nav"),c=n&&n.querySelector("[aria-current]");if(c)n.scrollLeft=c.offsetLeft-n.offsetLeft-(n.clientWidth-c.offsetWidth)/2;})();</script>
 <main id="top">
   <section class="intro" aria-labelledby="page-title">
-    <div><div class="eyebrow"><span class="tiny-line"></span> THE NEXT CHAPTER · VISION TRANSFORMERS</div><h1 id="page-title">An image is a sequence, <em>too.</em></h1><p>You know how transformers read words. Now see how they look at images.</p></div>
+    <div><div class="eyebrow"><span class="tiny-line"></span> THE NEXT CHAPTER · VISION TRANSFORMERS</div><h1 id="page-title">An image is a sequence,<br><em>too.</em></h1><p>You know how transformers read words. Now see how they look at images.</p><p class="page-links"><span>ON THIS PAGE</span><a href="#explorer">Explorer</a><a href="#rope-lab">2D RoPE lab</a><a href="#comparison">ViT vs. Pixtral</a><button type="button" id="about-open">About this chapter</button></p></div>
   </section>
   <section id="explorer" class="explorer" aria-label="Interactive vision encoder architecture">
     <div class="explorer-toolbar">

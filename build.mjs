@@ -7,8 +7,8 @@ const moduleSource=async name=>(await readFile(at('src/'+name+'.mjs'),'utf8')).r
 const mainFiles=['full-config','patch-window','matrix-row-guides','full-matrix','full-engine','full-operations','full-overlay','gelu-overlay','head-stack','block-navigation','attention-stages','attention-tooltip','attention-rail-alignment','attention-window-motion','attention-window','simple-attention','automatic-value-mixing','mlp-calculation','mlp-flow','mlp-overview','attention-overview','full-views','patch-projection-links','motion','rope-lab','full-app'];
 const workerFiles=['full-config','wasm-kernel','full-backend','full-engine','full-worker'];
 const main=(await Promise.all(mainFiles.map(moduleSource))).join('\n'),worker=(await Promise.all(workerFiles.map(moduleSource))).join('\n');
-let html=await readFile(at('vision.html'),'utf8'),css=await readFile(at('styles.css'),'utf8');
+let html=await readFile(at('vision.html'),'utf8'),css=await readFile(at('styles.css'),'utf8'),headerCss=await readFile(at('site-header.css'),'utf8');
 const safeJSON=value=>JSON.stringify(value).replace(/</g,'\\u003c');
-html=html.replace('<link rel="stylesheet" href="styles.css">',()=>`<style>\n${css}\n</style>`).replace('href="assets/icon.svg"',`href="${await svgData('assets/icon.svg')}"`);
+html=html.replace('<link rel="stylesheet" href="styles.css">',()=>`<style>\n${css}\n</style>`).replace('<link rel="stylesheet" href="site-header.css">',()=>`<style>\n${headerCss}\n</style>`).replace('href="assets/icon.svg"',`href="${await svgData('assets/icon.svg')}"`);
 html=html.replace('<script type="module" src="src/full-app.mjs"></script>',()=>`<script type="application/json" id="full-sample-sources">${safeJSON(sources)}</script>\n<script type="application/json" id="full-worker-source">${safeJSON(worker)}</script>\n<script type="module">\n${main}\n</script>`);
 await writeFile(at('standalone.html'),html);console.log(`Built standalone.html: ${Buffer.byteLength(html).toLocaleString()} bytes. Full dimensions, embedded worker + SIMD kernel, zero external dependencies.`);
