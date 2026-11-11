@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A small collection of visual, hands-on explanations of language models. Start with transformers, explore vision encoders, and follow along as more chapters are added.">
+  <meta name="description" content="A small collection of visual, hands-on explanations of language models. Explore transformer architecture, vision encoders and MoE, then learn how models are pretrained and post-trained.">
   <meta name="theme-color" content="#faf9f6">
   <title>LLM Explainer — Notes on language models</title>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -23,7 +23,7 @@
         <p class="intro-copy">A place to understand how language models work, one idea at a time. Visual explanations, interactive experiments, and a little math along the way.</p>
       </section>
       <section id="chapters" aria-labelledby="chapters-title">
-        <div class="list-heading"><h2 id="chapters-title">Start exploring</h2><span>FOUR PLACES TO BEGIN</span></div>
+        <div class="list-heading"><h2 id="chapters-title">Architecture</h2><span>HOW MODELS ARE BUILT</span></div>
         <ol class="chapter-list">
           <li>
             <a class="chapter-link" href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener noreferrer" aria-label="Text transformers (GPT2) — Transformer Explainer by Polo Club (opens in a new tab)">
@@ -49,6 +49,11 @@
           <li><a class="chapter-link" href="analytics.html"><span class="chapter-number" aria-hidden="true">04</span><div class="chapter-copy"><p class="chapter-kicker">THE MATH BEHIND THE DESIGN</p><h3>Parameters &amp; compute</h3><p>Count attention, MLP, SwiGLU and MoE weights. Then connect capacity to GPU compute, memory traffic, batching and the KV cache.</p><span class="chapter-meta">Interactive analytics · Math &amp; hardware intuition</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
         </ol>
       </section>
+      <section id="training" class="chapter-group" aria-labelledby="training-title"><div class="list-heading"><h2 id="training-title">Training</h2><span>HOW MODELS LEARN</span></div><ol class="chapter-list">
+        <li><a class="chapter-link" href="pretraining.html"><span class="chapter-number" aria-hidden="true">01</span><div class="chapter-copy"><p class="chapter-kicker">FROM TEXT TO WEIGHTS</p><h3>Pretraining</h3><p>Prepare a corpus, build a BPE tokenizer, and follow a tiny transformer through batch loss and backpropagation.</p><span class="chapter-meta">Interactive chapter · Data, tokens &amp; learning</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+        <li><a class="chapter-link" href="post-training-instruct.html"><span class="chapter-number" aria-hidden="true">02</span><div class="chapter-copy"><p class="chapter-kicker">LEARNING FROM DEMONSTRATIONS</p><h3>Post-training (Instruct)</h3><p>Explore chat tokens, curated demonstrations and how supervised fine-tuning learns from assistant responses.</p><span class="chapter-meta">Interactive chapter · Chat formatting &amp; SFT</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+        <li><a class="chapter-link" href="post-training-rl.html"><span class="chapter-number" aria-hidden="true">03</span><div class="chapter-copy"><p class="chapter-kicker">LEARNING FROM FEEDBACK</p><h3>Post-training (RL)</h3><p>Follow a GRPO loop from sampled answers and rewards to policy updates, checkpoint refreshes and inference.</p><span class="chapter-meta">Interactive chapter · GRPO &amp; checkpoints</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+      </ol></section>
       <p class="notebook-note">Just the beginning. More explanations and experiments to come.</p>
     </main>
     <footer class="journal-footer"><span>Small steps toward understanding.</span><a href="https://github.com/apravesh/llm-explainer" target="_blank" rel="noopener noreferrer">Source on GitHub <span aria-hidden="true">↗</span></a></footer>
