@@ -4,7 +4,8 @@ import {readFile,access} from 'node:fs/promises';
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 const [home,vision,moe,build,standalone]=await Promise.all(['index.html','vision.html','moe.html','build.mjs','standalone.html'].map(read));
 test('homepage links to text, vision, and MoE in the requested order',()=>{
- const list=home.match(/<ol class="chapter-list">([\s\S]*?)<\/ol>/)?.[1];assert.ok(list);
+ const list=home.slice(home.indexOf('<section id="chapters"')).match(/<ol class="chapter-list">([\s\S]*?)<\/ol>/)?.[1];assert.ok(list);
+ assert.deepEqual([...home.slice(home.indexOf('<section id="intro"'),home.indexOf('<section id="chapters"')).matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['what-is-an-llm.html','llm-use-cases.html']);
  assert.deepEqual([...list.matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['https://poloclub.github.io/transformer-explainer/','vision.html','moe.html','analytics.html']);
  assert.match(home,/BY POLO CLUB/);assert.doesNotMatch(home,/<script/);
 });

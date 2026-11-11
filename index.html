@@ -11,16 +11,23 @@
 </head>
 <body>
   <a class="skip-link" href="#chapters">Skip to chapters</a>
-  <header class="site-bar"><a class="site-brand" href="./" aria-label="LLM Explainer home"><span aria-hidden="true">[ ]</span> LLM EXPLAINER</a><nav aria-label="Chapters"><a href="./" aria-current="page">All chapters</a><span class="nav-group">Architecture</span><a href="vision.html">Vision</a><a href="moe.html">MoE</a><a href="analytics.html">Parameters</a><span class="nav-group">Training</span><a href="pretraining.html">Pretraining</a><a href="post-training-instruct.html">Instruct</a><a href="post-training-rl.html">RL</a></nav></header>
+  <header class="site-bar"><a class="site-brand" href="./" aria-label="LLM Explainer home"><span aria-hidden="true">[ ]</span> LLM EXPLAINER</a><nav aria-label="Chapters"><a href="./" aria-current="page">All chapters</a><span class="nav-group">Intro</span><a href="what-is-an-llm.html">What is an LLM?</a><a href="llm-use-cases.html">Use cases</a><span class="nav-group">Architecture</span><a href="vision.html">Vision</a><a href="moe.html">MoE</a><a href="analytics.html">Parameters</a><span class="nav-group">Training</span><a href="pretraining.html">Pretraining</a><a href="post-training-instruct.html">Instruct</a><a href="post-training-rl.html">RL</a></nav></header>
   <div class="journal-shell">
     <main>
       <section class="journal-intro" aria-labelledby="page-title">
         <p class="eyebrow">LEARN BY LOOKING INSIDE</p>
         <h1 id="page-title">Notes on<br><em>language models.</em></h1>
         <p class="intro-copy">A place to understand how language models work, one idea at a time. Visual explanations, interactive experiments, and a little math along the way.</p>
-        <p class="page-links"><span>ON THIS PAGE</span><a href="#chapters">Architecture</a><a href="#training">Training</a></p>
+        <p class="page-links"><span>ON THIS PAGE</span><a href="#intro">Intro</a><a href="#chapters">Architecture</a><a href="#training">Training</a></p>
       </section>
-      <section id="chapters" aria-labelledby="chapters-title">
+      <section id="intro" aria-labelledby="intro-title">
+        <div class="list-heading"><h2 id="intro-title">Intro</h2><span>START HERE</span></div>
+        <ol class="chapter-list">
+          <li><a class="chapter-link" href="what-is-an-llm.html"><span class="chapter-number" aria-hidden="true">01</span><div class="chapter-copy"><p class="chapter-kicker">THE BIG PICTURE</p><h3>What is an LLM?</h3><p>Treat the model as a black box that guesses the next word. Watch that one trick turn into sentences, stories and a chatbot.</p><span class="chapter-meta">Interactive chapter · No background needed</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+          <li><a class="chapter-link" href="llm-use-cases.html"><span class="chapter-number" aria-hidden="true">02</span><div class="chapter-copy"><p class="chapter-kicker">WHAT PEOPLE DO WITH THEM</p><h3>What are LLMs used for?</h3><p>Chatbots, creative writing, code completion and agents, seen as the same next-word machine. Then follow a chatbot as it searches the web before answering.</p><span class="chapter-meta">Interactive chapter · Use cases &amp; web search (RAG)</span></div><span class="chapter-arrow" aria-hidden="true">→</span></a></li>
+        </ol>
+      </section>
+      <section id="chapters" class="chapter-group" aria-labelledby="chapters-title">
         <div class="list-heading"><h2 id="chapters-title">Architecture</h2><span>HOW MODELS ARE BUILT</span></div>
         <ol class="chapter-list">
           <li>
