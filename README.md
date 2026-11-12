@@ -231,7 +231,7 @@ The RL page's loop lab has three method tabs. **REINFORCE** is the default: one 
 
 To make the REINFORCE/GRPO difference visible, a banner above the lanes counts how often the current answers have been used (one pip for REINFORCE, three for GRPO), and each GRPO lane has a drift meter: the learner's probability ratio against the frozen copy, the ±20% band, and a purple "paused" state once the favoured limit is passed.
 
-## Intro: What is an LLM?
+## Intro: How does an LLM actually work?
 
 `what-is-an-llm.html` is the first chapter, listed under a new **Intro** group on the home page and in every header. It treats the model as a black box and builds up in four steps: one next-word guess, the append-and-ask-again loop, story completion, and chat as a completion that starts with a `User: … / Assistant:` script. The box on the page is `src/intro-engine.mjs`: a longest-match lookup over about thirty hand-written example texts (three short stories, simple sentences, seven chat exchanges), with longer matches weighted 4^L. It is deliberately not a neural network, and the page says so. `src/intro-app.mjs` drives the animations; `intro.css` holds the styles.
 

@@ -24,6 +24,6 @@ test('intro page is first on the home page and in every header, and its assets r
  assert.match(html,/Not a real LLM/);assert.match(html,/GPT-2/);assert.match(html,/PaLM/);assert.match(html,/<code>User:<\/code>/);
  for(const [,href] of html.matchAll(/(?:href|src)="([^"]+)"/g))if(!/^(https?:|#|\.\/)/.test(href)){assert.ok(!href.startsWith('/'));await access(new URL('../'+href.split('#')[0],import.meta.url));}
  assert.ok(home.indexOf('id="intro"')<home.indexOf('id="chapters"'));
- for(const page of ['index.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','standalone.html'])assert.match(await read(page),/<a href="what-is-an-llm.html">What is an LLM\?<\/a>/);
+ for(const page of ['index.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','standalone.html'])assert.match(await read(page),/<a href="what-is-an-llm.html">How does an LLM actually work\?<\/a>/);
  assert.match(html,/<a href="what-is-an-llm.html" aria-current="page">/);
 });

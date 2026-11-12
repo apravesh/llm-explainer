@@ -1,4 +1,4 @@
-/* "What is an LLM?" — first-time-reader labs */
+/* "How does an LLM actually work?" — first-time-reader labs */
 .prompt-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
 .prompt-chips button{background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:6px 13px;font-size:12px;color:#55708f}
 .prompt-chips button:hover:not(:disabled){background:#f1f5fc}
@@ -103,3 +103,4 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 .token-note{font-size:12px;color:#8a9bb1;margin-top:12px}
 .token-note strong{font-weight:500;color:#55708f}
 .takeaways-intro .further{margin-top:22px}
+.section-heading h2 em .token-aside{font:400 .55em var(--mono);font-style:normal;letter-spacing:0;color:#8a9bb1;vertical-align:.15em;margin-left:.1em;white-space:nowrap}
