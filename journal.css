@@ -4,3 +4,4 @@
 @media(prefers-reduced-motion:reduce){.chapter-arrow{transition:none}.chapter-link:hover .chapter-arrow{transform:none}}
 
 .chapter-group{margin-top:48px}.chapter-group .list-heading h2,#chapters-title{font-size:19px;color:#405073}
+#intro-title{font-size:19px}
