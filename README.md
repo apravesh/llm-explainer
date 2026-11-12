@@ -238,3 +238,13 @@ To make the REINFORCE/GRPO difference visible, a banner above the lanes counts h
 ## Intro: What are LLMs used for?
 
 `llm-use-cases.html` is the second Intro chapter. The first lab shows four popular uses (chatbot, creative writing, code completion, agentic workflow) as two views of the same thing: the screen a person sees, and the single text stream the model receives and continues, colour-coded by who wrote each part. The second lab follows one question through a chatbot with web search, a minimal RAG setup: the model writes a search query, the app runs it, the results are pasted into the prompt above the question (`searchPrompt` in `src/use-cases-data.mjs`), and the model answers with sources. A switch replays the same question with search off. All examples are hand-written illustrations with an invented town and websites; nothing is live model output.
+
+## Architecture: Text transformers (GPT-2)
+
+`transformer.html` is a plain-HTML retelling of [Transformer Explainer](https://github.com/poloclub/transformer-explainer) by Polo Club of Data Science (MIT licence) in this site's style. It does not run a model and downloads no weights.
+
+- `src/text-data.mjs` (about 190 KB) holds values that project recorded from GPT-2 (small) for its five example sentences: tokens and IDs, the 50 highest next-token logits, and the raw attention scores (query·key) for all 12 blocks × 12 heads.
+- `src/text-engine.mjs` computes the rest from those recordings: scale by √64, causal mask, softmax, temperature, top-k, top-p and sampling. `tests/text.test.mjs` checks it against the numbers the original page shows.
+- The 01 Embedding section (text and `assets/transformer-explainer/embedding.png`) is copied from the original article as it is, with credit on the page.
+- Embedding and MLP vectors were not recorded. They are drawn from a seeded generator and labelled illustrative on the page.
+- Because there is no model, the sentence is fixed to the five examples; Generate redraws only the final sampling step. The page links to the original for typing your own text.

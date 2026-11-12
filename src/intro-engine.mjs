@@ -38,7 +38,9 @@ export const CORPUS = Object.freeze([
 const MAX_CONTEXT = 12;
 /**
  * Next-word distribution for a context. For every suffix length L that occurs in the examples, count what
- * came next; longer matches get much more weight (4^L), so the most specific evidence dominates.
+ * came next; longer matches get more weight (2^L, levelling off after 4 words), so specific evidence
+ * leads but shorter matches keep a real chance. That keeps random stories varied, while long contexts
+ * (a whole chat question) still decide the top pick.
  */
 export function predict(context, {top = 5} = {}) {
  if (!Array.isArray(context) || !context.length) throw new RangeError('Need at least one context word');
@@ -54,7 +56,7 @@ export function predict(context, {top = 5} = {}) {
   }
   if (!total) continue;
   matched = Math.max(matched, L);
-  const weight = 4 ** L;
+  const weight = 2 ** Math.min(L, 4);
   for (const [token, n] of counts) scores.set(token, (scores.get(token) || 0) + weight * n / total);
  }
  if (!scores.size) return {candidates: [], matched: 0};

@@ -104,3 +104,4 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 .token-note strong{font-weight:500;color:#55708f}
 .takeaways-intro .further{margin-top:22px}
 .section-heading h2 em .token-aside{font:400 .55em var(--mono);font-style:normal;letter-spacing:0;color:#8a9bb1;vertical-align:.15em;margin-left:.1em;white-space:nowrap}
+.notes-section{padding:20px 0 34px}.lesson-section.notes-section>.further{margin-top:0;border-top:0;padding-top:0}

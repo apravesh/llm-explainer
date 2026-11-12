@@ -47,6 +47,8 @@ function renderNextWord(fresh = true) {
 $('#nw-prompts').addEventListener('click', e => { const b = e.target.closest('[data-nw]'); if (!b) return; nwPrompt = +b.dataset.nw; renderNextWord(); $(`[data-nw="${nwPrompt}"]`).focus({preventScroll: true}); });
 
 /* ---------- 02 · The loop ---------- */
+// A new seed on every start, so 'surprise me' gives a different run each time you start over.
+const freshSeed = () => (Math.random() * 4294967296) >>> 0;
 const loop = {prompt: 0, context: [], start: 0, dice: false, seed: 7, roll: null, asked: 1, timer: null, playing: false};
 const loopDone = () => loop.context.at(-1) === END || (loop.context.length > loop.start && loop.context.at(-1) === '.') || !predict(loop.context).candidates.length || loop.context.length - loop.start >= 60;
 function loopRoll() { if (!loop.dice) { loop.roll = null; return; } const r = nextRandom(loop.seed); loop.seed = r.seed; loop.roll = r.value; }
@@ -65,7 +67,7 @@ function renderLoop(fresh = false, newest = -1) {
  $('#loop-count').textContent = `The box has been asked ${loop.asked} time${loop.asked === 1 ? '' : 's'}`;
 }
 function loopStop() { if (loop.timer !== null) clearTimeout(loop.timer); loop.timer = null; loop.playing = false; }
-function loopStart(prompt = loop.prompt) { loopStop(); loop.prompt = prompt; loop.context = tokenize(NEXT_WORD_PROMPTS[prompt]); loop.start = loop.context.length; loop.seed = 7; loop.asked = 1; loopRoll(); renderLoop(true); }
+function loopStart(prompt = loop.prompt) { loopStop(); loop.prompt = prompt; loop.context = tokenize(NEXT_WORD_PROMPTS[prompt]); loop.start = loop.context.length; loop.seed = freshSeed(); loop.asked = 1; loopRoll(); renderLoop(true); }
 function loopAdd(token) {
  if (loopDone()) return;
  const prediction = predict(loop.context);
@@ -95,7 +97,7 @@ function renderStory(fresh = false) {
  $('#story-sentence').textContent = done ? 'The story is finished' : 'Write the next sentence →';
 }
 function storyStop() { if (story.timer !== null) clearTimeout(story.timer); story.timer = null; story.playing = false; }
-function storyStart(prompt = story.prompt) { storyStop(); story.prompt = prompt; story.context = tokenize(STORY_PROMPTS[prompt]); story.start = story.context.length; story.seed = 3; story.last = null; renderStory(); }
+function storyStart(prompt = story.prompt) { storyStop(); story.prompt = prompt; story.context = tokenize(STORY_PROMPTS[prompt]); story.start = story.context.length; story.seed = freshSeed(); story.last = null; renderStory(); }
 function storyWord() {
  const prediction = predict(story.context);
  let u = null; if (story.dice) { const r = nextRandom(story.seed); story.seed = r.seed; u = r.value; }

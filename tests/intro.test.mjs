@@ -27,3 +27,9 @@ test('intro page is first on the home page and in every header, and its assets r
  for(const page of ['index.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','standalone.html'])assert.match(await read(page),/<a href="what-is-an-llm.html">How does an LLM actually work\?<\/a>/);
  assert.match(html,/<a href="what-is-an-llm.html" aria-current="page">/);
 });
+test('random stories vary: many different stories per opening, and a new seed on every start',async()=>{
+ const {generate,tokenize,detokenize,STORY_PROMPTS}=await import('../src/intro-engine.mjs');
+ for(const p of STORY_PROMPTS){const seen=new Set();for(let s=1;s<=200;s++)seen.add(detokenize(generate(tokenize(p),{seed:s*7919,limit:90})));assert.ok(seen.size>=25,`${p}: ${seen.size} distinct stories`);}
+ const app=await (await import('node:fs/promises')).readFile(new URL('../src/intro-app.mjs',import.meta.url),'utf8');
+ assert.match(app,/story\.seed = freshSeed\(\)/);assert.doesNotMatch(app,/story\.seed = 3;/);
+});
