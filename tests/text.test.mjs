@@ -50,7 +50,7 @@ test('illustrative vectors are deterministic and bounded',()=>{
 test('text page: structure, honesty labels, credit and links',async()=>{
  const html=await read('transformer.html');
  for(const id of ['explorer','embedding','attention','mlp','output','tx-flow','tx-example','tx-generate','attn-lab','prob-table'])assert.match(html,new RegExp(`id="${id}"`));
- assert.match(html,/src="src\/text-app\.mjs"/);assert.match(html,/<a href="transformer\.html" aria-current="page">Text<\/a>/);
+ assert.match(html,/src="src\/text-app\.mjs"/);assert.match(html,/<a href="transformer\.html" aria-current="page">Transformer<\/a>/);
  assert.match(html,/Recorded from GPT-2/);assert.match(html,/does not run a model/i);assert.match(html,/illustrative/i);
  assert.match(html,/Transformer Explainer/);assert.match(html,/Polo Club/);assert.match(html,/MIT/);
  assert.doesNotMatch(html,/onnx|model-v2/i);
@@ -88,6 +88,6 @@ test('explorer is full width, and a block or head change redraws only that part'
 });
 test('every page header and the home page link to the text chapter',async()=>{
  for(const page of ['index.html','what-is-an-llm.html','llm-use-cases.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','transformer.html'])
-  assert.match(await read(page),/<span class="nav-group">Architecture<\/span><a href="transformer\.html"[^>]*>Text<\/a><a href="vision\.html"/);
+  assert.match(await read(page),/<span class="nav-group">Architecture<\/span><a href="transformer\.html"[^>]*>Transformer<\/a><a href="vision\.html"/);
  assert.match(await read('index.html'),/class="chapter-link" href="transformer\.html"/);
 });
