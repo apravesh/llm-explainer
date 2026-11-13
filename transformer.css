@@ -299,3 +299,14 @@
 .tx-formula .prob-card.bare ol{padding:0;gap:9px}
 .tx-formula:has(.prob-card.bare){width:400px}
 @media(prefers-reduced-motion:reduce){#tx-lab #tx-flow .late{animation:none}}
+/* MLP opened in place, and vector sizes on hover */
+#tx-flow .mlp-size{font:9px var(--mono);fill:#9aabc1}
+#tx-flow .hit{fill:transparent}
+#tx-flow [data-dim]{cursor:help}
+#tx-flow:not(.expanded) [data-zone] [data-dim]{cursor:zoom-in}
+/* output step: matrix rows and logits */
+#tx-flow .proj-row{fill:#f4f6fb;stroke:#d3dcee}
+#tx-flow .proj-num{font:11px var(--mono);fill:#3f4f63}
+#tx-flow .proj .nbg{fill:#f1f4f8}
+#tx-flow .proj-more{font-size:14px;fill:#9aabc1}
+#tx-flow .prob-part .proj-row{fill:#f4f6fb;stroke:#d3dcee}

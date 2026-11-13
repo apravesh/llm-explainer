@@ -61,15 +61,28 @@ const FORMULAS=[
  `<h4>Softmax · Dropout</h4><div class="fx">weight<sub>i,j</sub> = <span class="frac"><span>exp(scaled<sub>i,j</sub>)</span><span><span class="sum">Σ<sub>k</sub></span> exp(scaled<sub>i,k</sub>)</span></span></div><p>Each row is turned into weights that add up to 1, and −∞ becomes 0. Dropout randomly zeroes some weights during training; it is switched off when the model is used.</p>`,
  `<h4>Out</h4><div class="fx">out<sub>i</sub> = <span class="sum">Σ<sub>j</sub></span> weight<sub>i,j</sub> × V<sub>j</sub></div><p>Each token's output is a blend of the Value vectors, mixed by its row of attention weights. A token it attended to strongly contributes most; a masked token contributes nothing.</p>`,
  `<h4>MLP</h4><div class="fx">MLP(x) = W<sub>2</sub> · GELU(W<sub>1</sub> · x + b<sub>1</sub>) + b<sub>2</sub></div><p>Each token's vector x (768 numbers) is widened to 3,072 by W<sub>1</sub>, passed through GELU, and narrowed back to 768 by W<sub>2</sub>. Every token uses the same weights, and the result is added back to x.</p>`,
- `<h4>Output projection</h4><div class="fx">logits = W<sub>out</sub> · h<sub>last</sub><br>p = softmax(logits ÷ T)</div><p>After the last block, the final token's vector h<sub>last</sub> (768 numbers) is multiplied by one more matrix to give a score for each of the 50,257 tokens. Temperature T and top-k or top-p then shape those scores into the probabilities on the right.</p>`,
+ `<h4>Output projection</h4><div class="fx">logits = W<sub>out</sub> · h<sub>last</sub><br>W<sub>out</sub> : matrix(50,257 × 768)</div><p>h<sub>last</sub> is the last token's final vector, 768 numbers. The output matrix W<sub>out</sub> has 50,257 rows, one for every token in the vocabulary, and 768 columns to match the vector. Multiplying them gives 50,257 logits, one score per token, which softmax turns into the probabilities on the right.</p>`,
  `<h4>Temperature</h4><div class="fx">scaled<sub>i</sub> = logit<sub>i</sub> ÷ T</div><p>Every score is divided by T before softmax. Below 1 the gaps between scores grow, so the top token wins more often and the text is more predictable. Above 1 the gaps shrink, so unlikely tokens get a real chance and the text is more varied.</p>`,
  `<h4>Top-k</h4><div class="fx">keep the k highest scores<br>all others → −∞</div><p>Only the k most likely tokens stay in the draw; the rest get probability 0. With k = 1 the model always picks its top guess.</p>`,
  `<h4>Top-p</h4><div class="fx">keep the smallest set with <span class="sum">Σ</span> p<sub>i</sub> ≥ p<br>all others → −∞</div><p>Tokens are taken from most to least likely until their probabilities add up to p. The set is small when the model is sure and large when it is not, so it adapts where top-k is fixed.</p>`,
- `<h4>Tokenization</h4><div class="fx">text → tokens → token IDs</div><p>The prompt is cut into tokens from a fixed vocabulary of 50,257 (byte-pair encoding), and each token is replaced by its ID. “empowers” becomes two tokens, “em” and “powers”.</p>`,
+ `<h4>Tokenization</h4><div class="fx">text → tokens → token IDs</div><p>The prompt is cut into tokens from a fixed vocabulary of 50,257, and each token is replaced by its ID. “empowers” becomes two tokens, “em” and “powers”.</p>`,
  `<h4>Token embedding</h4><div class="fx">e<sub>i</sub> = W<sub>E</sub>[ id<sub>i</sub> ]</div><p>The ID picks one row out of a learned table W<sub>E</sub> with 50,257 rows of 768 numbers. Tokens used in similar ways end up with similar rows.</p>`,
  `<h4>Positional encoding</h4><div class="fx">x<sub>i</sub> = W<sub>E</sub>[ id<sub>i</sub> ] + W<sub>P</sub>[ i ]</div><p>A second learned table W<sub>P</sub> has one row of 768 numbers for each position in the sentence. Adding it tells the model where the token sits. The sum x<sub>i</sub> is what enters the first block.</p>`,
- `<h4>Softmax</h4><div class="fx">p<sub>i</sub> = <span class="frac"><span>exp(s<sub>i</sub>)</span><span><span class="sum">Σ<sub>j</sub></span> exp(s<sub>j</sub>)</span></span></div><p>The scores that survive the filter are turned into probabilities that add up to 100%. A token that was filtered out (−∞) gets exactly 0%. The next token is then drawn from these.</p>`
+ `<h4>Softmax</h4><div class="fx">p<sub>i</sub> = <span class="frac"><span>exp(s<sub>i</sub>)</span><span><span class="sum">Σ<sub>j</sub></span> exp(s<sub>j</sub>)</span></span></div><p>The scores that survive the filter are turned into probabilities that add up to 100%. A token that was filtered out (−∞) gets exactly 0%. The next token is then drawn from these.</p>`,
+ `<h4>Linear · widen</h4><div class="fx">h = W<sub>1</sub> · x + b<sub>1</sub></div><p>x is the token's vector, 768 numbers. W<sub>1</sub> is a learned matrix of 3,072 × 768, so h has 3,072 numbers: four times as many places to pull patterns apart.</p>`,
+ `<h4>GELU</h4><div class="fx">GELU(h) = h · Φ(h)</div><p>Applied to each of the 3,072 numbers on its own. Positive values pass almost unchanged and negative ones are pushed towards zero, so only the patterns that fired stay on. (Φ is the bell curve's cumulative share.)</p>`,
+ `<h4>Linear · narrow</h4><div class="fx">y = W<sub>2</sub> · GELU(h) + b<sub>2</sub><br>output = x + y</div><p>W<sub>2</sub> is 768 × 3,072 and brings the vector back to 768 numbers. The result is added to the vector that came in (the residual connection).</p>`,
+ `<h4>Output matrix</h4><div class="fx">logits = W<sub>out</sub> · h<sub>last</sub><br>W<sub>out</sub> : matrix(50,257 × 768)</div><p>50,257 rows, one for every token in the vocabulary, and 768 columns, as long as the final vector. Each row times the vector gives that token's score, so the result is 50,257 logits. That is about 38.6 million numbers; GPT-2 reuses its token embedding table for it.</p>`
 ];
+// How many blocks still follow the one shown. The bars after the MLP stand for their outputs: three
+// while several blocks remain, two on block 11 (one block left), one on block 12 (only the final vector).
+const blocksLeft=()=>BLOCKS-1-state.block;
+function paintMore(root=$('#tx-flow')){
+ const left=blocksLeft(),bars=Math.min(3,left+1);
+ root.querySelectorAll('.more-a').forEach(t=>{t.textContent=left?`${left} MORE`:'LAST';});
+ root.querySelectorAll('.more-b').forEach(t=>{t.textContent=left===1?'BLOCK':left?'BLOCKS':'BLOCK';});
+ root.querySelectorAll('.more-bar').forEach(r=>{r.style.display=+r.dataset.b<bars?'':'none';});
+}
 function flow(){
  const {tokens,attn}=ex(),n=tokens.length,H=Y0+n*PITCH+48;
  const yc=i=>Y0+i*PITCH+PITCH/2;
@@ -78,17 +91,17 @@ function flow(){
  const top=86,bottom=H-30,ch=bottom-top,fx=218,fy=48,fw=712,fh=H-fy-8;
  const gy={k:top+ch*0.2,q:top+ch*0.5,v:top+ch*0.82};
  const ty=(g,i)=>gy[g]+(i-(n-1)/2)*TP;
- // one part can be open at a time: 'embedding', 'attention' or 'probabilities'
- const X=state.expand,E=X==='attention',EE=X==='embedding',EP=X==='probabilities',mats=E?3:1,matW=n*TP,mgap=58,mx=m=>548+m*(matW+mgap),mx0=mx(0),cx=(j,m=0)=>mx(m)+j*TP,mtop=ty('q',0)-TP/2-3;
- const dA=(mats-1)*(matW+mgap),dE=EE?300:0,dP=EP?290:0,outX=716+dA,cardW=440+dA,anim=state.anim,prev=state.last||{dA:0,dE:0,dP:0},was=prev.dA;
- state.anim=null;state.last={dA,dE,dP};
+ const names={q:'Query',k:'Key',v:'Value'};
+ // one part can be open at a time: 'embedding', 'attention', 'mlp' or 'probabilities'
+ const X=state.expand,E=X==='attention',EE=X==='embedding',EP=X==='probabilities',EM=X==='mlp',mats=E?3:1,matW=n*TP,mgap=58,mx=m=>548+m*(matW+mgap),mx0=mx(0),cx=(j,m=0)=>mx(m)+j*TP,mtop=ty('q',0)-TP/2-3;
+ const dA=(mats-1)*(matW+mgap),dE=EE?300:0,dP=EP?400:0,dM=EM?218:0,outX=716+dA,cardW=440+dA,anim=state.anim,prev=state.last||{dA:0,dE:0,dP:0,dM:0},was=prev.dA;
+ state.anim=null;state.last={dA,dE,dP,dM};
  // everything that is not the open part fades into the background
- const dimEmb=E||EP?' xdim':'',dimBlock=EE||EP?' xdim':'',dimSide=X?' xdim':'',dimProb=E||EE?' xdim':'';
- const fromE=anim?prev.dE-dE:0,fromP=anim?dP-prev.dP:0,openE=anim==='open'&&EE,openP=anim==='open'&&EP;
+ const dimEmb=X&&!EE?' xdim':'',dimBlock=EE||EP||EM?' xdim':'',dimFrame=EE||EP?' xdim':'',dimSide=X?' xdim':'',dimMlp=X&&!EM?' xdim':'',dimProb=X&&!EP?' xdim':'';
+ const fromE=anim?prev.dE-dE:0,fromM=anim?prev.dM-dM:0,fromP=anim?(prev.dM-prev.dP)-(dM-dP):0,openE=anim==='open'&&EE,openP=anim==='open'&&EP,openM=anim==='open'&&EM;
  const late=(on,at)=>on?` late" style="--at:${at}ms`:'';
  // entrance values for the expand / collapse motion: where things come from, and how wide the frames were
  const from=anim?was-dA:0,sx=w=>anim?((w-dA+was)/w).toFixed(4):1;
- const names={q:'Query',k:'Key',v:'Value'};
  let s=`<title id="tx-flow-title">A sentence flowing through embedding, transformer block ${state.block+1} and the output probabilities</title>`;
  // column titles
  s+=`<g class="stage${dimEmb}" style="--d:0" data-zone="embedding"><g data-expand="embedding" role="button" tabindex="0" aria-label="Open the embedding step"><text class="col-title" x="20" y="30">Embedding</text></g></g>`;
@@ -98,26 +111,26 @@ function flow(){
  if(EE){
   const pill=(k,x,w,label,at)=>`<g class="stage-name${late(openE,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+4}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+17}" text-anchor="middle">${label}</text></g>`;
   s+=pill(9,78,90,'Tokenization',250)+pill(10,194,106,'Token embedding',650)+pill(11,322,124,'Positional encoding',1050);
-  const stripes=(x,y,vs,colour)=>vs.slice(0,10).map((v,k)=>`<rect x="${x}" y="${(y-15+k*3).toFixed(1)}" width="12" height="2.4" fill="${colour?(v>=0?'#7a9bec':'#d79278'):'#9aabc1'}" opacity="${(0.3+0.7*Math.abs(v)).toFixed(2)}"/>`).join('');
+  const stripes=(x,y,vs,colour,what)=>vs.slice(0,10).map((v,k)=>`<rect x="${x}" y="${(y-15+k*3).toFixed(1)}" width="12" height="2.4" fill="${colour?(v>=0?'#7a9bec':'#d79278'):'#9aabc1'}" opacity="${(0.3+0.7*Math.abs(v)).toFixed(2)}"/>`).join('')+`<rect class="hit" data-dim="${what} · vector(768)" x="${x-2}" y="${y-16}" width="16" height="32"/>`;
   tokens.forEach((t,i)=>{
    const y=yc(i),st=i*60;
    s+=`<g class="emb-step${late(openE,250+st)}"><path class="emb-arrow" d="M134,${y}H166m-5,-4l5,4l-5,4"/></g>`;
-   s+=`<g class="emb-step${late(openE,650+st)}">${stripes(180,y,illustrativeVector(ex().tokenIds[i]),false)}${i?'':`<text class="emb-key" x="198" y="${y-6}">id</text>`}<text class="emb-num" x="198" y="${y+(i?4:8)}">${ex().tokenIds[i]}</text></g>`;
-   s+=`<g class="emb-step${late(openE,1050+st)}"><text class="emb-op" x="262" y="${y+5}" text-anchor="middle">+</text>${stripes(292,y,illustrativeVector(90000+i),true)}${i?'':`<text class="emb-key" x="310" y="${y-6}">position</text>`}<text class="emb-num" x="310" y="${y+(i?4:8)}">${i}</text></g>`;
+   s+=`<g class="emb-step${late(openE,650+st)}">${stripes(180,y,illustrativeVector(ex().tokenIds[i]),false,'token embedding')}${i?'':`<text class="emb-key" x="198" y="${y-6}">id</text>`}<text class="emb-num" x="198" y="${y+(i?4:8)}">${ex().tokenIds[i]}</text></g>`;
+   s+=`<g class="emb-step${late(openE,1050+st)}"><text class="emb-op" x="262" y="${y+5}" text-anchor="middle">+</text>${stripes(292,y,illustrativeVector(90000+i),true,'positional encoding')}${i?'':`<text class="emb-key" x="310" y="${y-6}">position</text>`}<text class="emb-num" x="310" y="${y+(i?4:8)}">${i}</text></g>`;
    s+=`<g class="emb-step${late(openE,1450+st)}"><text class="emb-op" x="${dE+110}" y="${y+5}" text-anchor="middle">=</text></g>`;
   });
  }
  s+=`</g>`;
  // from the embedding bars onward, everything moves right to make room when embedding is open
  s+=`<g transform="translate(${dE})"><g class="${anim?'slide':''}" style="--from:${fromE}px">`;
- s+=`<g class="stage${dimBlock}" style="--d:1"><rect class="frame${anim?' widen':''}" style="--sx:${sx(fw+dA)}" x="${fx}" y="${fy}" width="${fw+dA}" height="${fh}" rx="10"/>${chip('block',fx+18,fy,blockLabel(),176)}</g>`;
+ s+=`<g class="stage${dimFrame}" style="--d:1"><rect class="frame${anim?' widen':''}" style="--sx:${anim?((fw+prev.dA+prev.dM)/(fw+dA+dM)).toFixed(4):1}" x="${fx}" y="${fy}" width="${fw+dA+dM}" height="${fh}" rx="10"/>${chip('block',fx+18,fy,blockLabel(),176)}</g>`;
  s+=`<g class="stage${dimEmb}" style="--d:0" data-zone="embedding">`;
- tokens.forEach((t,i)=>{s+=`<rect data-t="${i}" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
+ tokens.forEach((t,i)=>{s+=`<rect data-t="${i}" data-dim="vector(768)" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
  s+=`</g><g class="stage block-part${dimSide}" style="--d:1">`;
  tokens.forEach((t,i)=>{
   const y=yc(i);
   [['q',-12],['k',0],['v',12]].forEach(([g,dy])=>{
-   s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,232,y+dy)}" stroke-width="1.2"/><rect class="${g}" x="232" y="${y+dy-4.5}" width="9" height="9" rx="1.5" opacity=".75"/><text class="mini" x="246" y="${y+dy+3}">${g.toUpperCase()}</text></g>`;
+   s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,232,y+dy)}" stroke-width="1.2"/><rect class="${g}" data-dim="${names[g]} weights · matrix(768 × 768)" x="232" y="${y+dy-4.5}" width="9" height="9" rx="1.5" opacity=".75"/><text class="mini" x="246" y="${y+dy+3}">${g.toUpperCase()}</text></g>`;
   });
  });
  s+=`</g>`;
@@ -129,7 +142,7 @@ function flow(){
   s+=`<text class="lbl-${g}" x="452" y="${ty(g,0)-12}">${names[g]}</text>`;
   tokens.forEach((t,i)=>{
    const y=ty(g,i),dy=g==='q'?-12:g==='k'?0:12;
-   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(254,yc(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(showToken(t))}</text><rect class="${g}" x="452" y="${y-1.5}" width="12" height="3" rx="1"/></g>`;
+   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(254,yc(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(showToken(t))}</text><rect class="${g}" data-dim="${names[g]}, this head · vector(64)" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${names[g]}, this head · vector(64)" x="450" y="${y-5}" width="16" height="10"/></g>`;
   });
  }
  s+=`</g><g class="stage head-part${dimBlock}" style="--d:3" data-zone="attention">`;
@@ -165,47 +178,76 @@ function flow(){
  s+=`<g class="${anim?'slide':''}" style="--from:${from}px"><path class="band${opening?' late':''}" style="--at:${T3}ms;fill:#e6dcf0" d="M${mr},${ty('q',0)-6} L${outX},${ty('q',0)-2} V${ty('q',n-1)+2} L${mr},${ty('q',n-1)+6} Z"/>`;
  s+=`<g class="stage-name out-name" data-formula="3" tabindex="0" role="button" aria-label="Out: show the formula"><rect x="${outX-13}" y="${ty('q',0)-27}" width="40" height="19" rx="9"/><text x="${outX+7}" y="${ty('q',0)-14}" text-anchor="middle">Out</text></g>`;
  tokens.forEach((t,i)=>{
-  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/></g>`;
+  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="Out, this head · vector(64)" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
  });
  s+=`</g></g>`;
  // MLP and the remaining blocks
  s+=`<g class="stage${dimBlock}" style="--d:2">${chip('head',346,top,headLabel(),282)}</g>`;
- s+=`<g transform="translate(${dA})" style="--oxL:${fx-dA}px;--oxR:${fx+fw}px"><g class="${anim?'slide':''}" style="--from:${from}px"><g class="${dimSide}">`;
- s+=`<g class="stage" style="--d:4"><g class="stage-name mlp-name" data-formula="4" tabindex="0" role="button" aria-label="MLP: show the formula"><rect x="${806-9}" y="${fy+21}" width="42" height="19" rx="9"/><text x="${806+12}" y="${fy+34}" text-anchor="middle">MLP</text></g><text class="col-sub" x="944" y="46">11 MORE</text><text class="col-sub" x="944" y="58">BLOCKS</text></g>`;
+ s+=`<g transform="translate(${dA})" style="--oxL:${fx-dA}px;--oxR:${fx+fw+dM}px"><g class="${anim?'slide':''}" style="--from:${from}px">`;
+ // MLP: one narrow → wide → narrow shape per token. Opened, it is drawn step by step: Linear → 3,072 → GELU → 3,072 → Linear.
+ const x2=EM?1010:846,xo=902+dM,mpill=(k,x,w,label,at)=>`<g class="stage-name${late(openM,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+40}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+53}" text-anchor="middle">${label}</text></g>`;
+ s+=`<g class="${dimMlp}" data-zone="mlp"><g class="stage" style="--d:4"><g class="stage-name mlp-name" data-formula="4" tabindex="0" role="button" aria-label="MLP: show the formula"><rect x="${806-9}" y="${fy+21}" width="42" height="19" rx="9"/><text x="${806+12}" y="${fy+34}" text-anchor="middle">MLP</text></g>${EM?mpill(13,858,56,'Linear',300)+mpill(14,968,50,'GELU',900)+mpill(15,1078,56,'Linear',1500):''}</g>`;
  s+=`<g class="stage block-part" style="--d:4">`;
  tokens.forEach((t,i)=>{
-  const y=yc(i);
-  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/>`;
-  s+=`<rect x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/><path class="band" style="fill:#d3dcee" d="M816,${y-15} L846,${y-22} V${y+22} L816,${y+15} Z"/><rect x="846" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/><path class="band" style="fill:#d3dcee" d="M872,${y-22} L902,${y-15} V${y+15} L872,${y+22} Z"/><rect x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
-  s+=`<path class="fg" d="M912,${y} H944" stroke-width="1.2"/>`;
-  for(let b=0;b<3;b++)s+=`<rect x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
+  const y=yc(i),lit=illustrativeVector(7000+i,5);
+  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="vector(768)" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
+  if(EM){
+   s+=`<g class="${late(openM,300+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M816,${y-15} L900,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="vector(3072)" x="900" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/></g>`;
+   s+=`<g class="${late(openM,900+i*50).trim()}"><path class="emb-arrow" d="M930,${y}H1004m-5,-4l5,4l-5,4"/><rect data-dim="vector(3072)" x="1010" y="${y-22}" width="26" height="44" rx="3" fill="#d3dcee"/>${lit.map((v,k)=>v>0?`<rect x="1010" y="${(y-22+k*8.8).toFixed(1)}" width="26" height="8.8" fill="#6681b5" opacity="${(0.35+0.6*v).toFixed(2)}" style="pointer-events:none"/>`:'').join('')}</g>`;
+   s+=`<g class="${late(openM,1500+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M1036,${y-22} L${xo},${y-15} V${y+15} L1036,${y+22} Z"/><rect data-dim="vector(768)" x="${xo}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
+  }else{
+   s+=`<path class="band" style="fill:#d3dcee" d="M816,${y-15} L846,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="vector(3072)" x="846" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/><path class="band" style="fill:#d3dcee" d="M872,${y-22} L902,${y-15} V${y+15} L872,${y+22} Z"/><rect data-dim="vector(768)" x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
+  }
   s+=`</g>`;
  });
- s+=`</g>`;
+ // the sizes, written under the column so the widening is obvious
+ const dy=yc(n-1)+38,size=(x,label,at)=>`<text class="mlp-size${late(openM,at)}" x="${x}" y="${dy}" text-anchor="middle">${label}</text>`;
+ s+=EM?size(811,'768',0)+size(913,'3,072',300)+size(1023,'3,072',900)+size(xo+5,'768',1500):size(811,'768',0)+size(859,'3,072',0)+size(907,'768',0);
+ s+=`</g></g>`;
+ // the blocks that follow move aside when the MLP is open
+ s+=`<g transform="translate(${dM})"><g class="${anim?'slide':''}${dimSide}" style="--from:${fromM}px"><g class="stage block-part" style="--d:4"><text class="col-sub more-a" x="944" y="46"></text><text class="col-sub more-b" x="944" y="58"></text>`;
+ tokens.forEach((t,i)=>{
+  const y=yc(i);
+  s+=`<g data-t="${i}"><path class="fg" d="M912,${y} H944" stroke-width="1.2"/>`;
+  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="vector(768)" x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
+  s+=`</g>`;
+ });
+ s+=`</g></g></g>`;
  // probabilities for the last token: drawn once, then updated in place by refreshProbs().
- // Opened, the list becomes a table: logit → ÷ temperature → top-k / top-p → softmax.
- const shown=list.slice(0,10),py=r=>(EP?102:84)+r*30,last=n-1,bx=EP?1372:1132,cut=state.type==='top-k'?'Top-k':'Top-p';
- s+=`</g><g transform="translate(${-dP})"><g class="${anim?'slide':''}${dimProb}" style="--from:${fromP}px" data-zone="probabilities">`;
- s+=`<g class="stage" style="--d:6"><g data-expand="probabilities" role="button" tabindex="0" aria-label="Open the output probabilities step"><text class="col-title" x="1052" y="30">Probabilities</text></g></g>`;
+ // Opened, it shows the whole last step in one row per token:
+ // final vector × output matrix = logit → ÷ temperature → top-k / top-p → softmax.
+ const shown=list.slice(0,10),py=r=>(EP?102:84)+r*30,last=n-1,cut=state.type==='top-k'?'Top-k':'Top-p';
+ const MX=1136,MW=118,LX=1311,TX=1386,KX=1461,bx=EP?1508:1132;   // matrix, logit, scaled, filter and bar positions when open
+ s+=`<g transform="translate(${dM-dP})"><g class="${anim?'slide':''}${dimProb}" style="--from:${fromP}px" data-zone="probabilities">`;
+ s+=`<g class="stage" style="--d:6"><g data-expand="probabilities" role="button" tabindex="0" aria-label="Open the output step"><text class="col-title" x="1052" y="30">Probabilities</text></g></g>`;
  s+=`<g class="stage prob-part" style="--d:6">`;
- if(EP)s+=`<rect class="prob-bg" x="1030" y="42" width="470" height="${py(9)-18}" rx="8"/>`;
+ if(EP)s+=`<rect class="prob-bg" x="952" y="42" width="690" height="${py(9)+6}" rx="8"/>`;
  shown.forEach(r=>{s+=`<path class="fo pc" data-rank="${r.rank}" d="${curve(980,yc(last),1040,py(r.rank)-4)}"/>`;});
- s+=`<g class="stage-name fan-hit" data-formula="5" tabindex="0" role="button" aria-label="Output projection: show the formula"><path d="M974,${yc(last)-12} L1044,${py(0)-16} V${py(9)+8} L974,${yc(last)+12} Z"/></g>`;
+ if(!EP)s+=`<g class="stage-name fan-hit" data-formula="5" tabindex="0" role="button" aria-label="Output projection, a 50,257 × 768 matrix: show the formula"><path d="M974,${yc(last)-12} L1044,${py(0)-16} V${py(9)+8} L974,${yc(last)+12} Z"/></g>`;
  if(EP){
   const head=(k,x,w,label,at,cls='')=>`<g class="stage-name${cls}${late(openP,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+4}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+17}" text-anchor="middle">${label}</text></g>`;
-  s+=`<text class="col-sub" x="1124" y="${fy+17}" text-anchor="end">TOKENS</text>`+head(5,1175,58,'Logits',350)+head(6,1250,84,'÷ temperature',800)+head(state.type==='top-k'?7:8,1325,58,cut,1250,' pk-head')+head(12,1410,68,'Softmax',1700);
+  const below=py(9)+22;
+  s+=`<g class="${late(openP,150).trim()}"><rect data-dim="final vector of the last token · vector(768)" x="966" y="${yc(last)-15}" width="12" height="30" rx="2" fill="#a9c0f3"/><text class="mlp-size" x="972" y="${yc(last)+30}" text-anchor="middle">768</text></g>`;
+  s+=`<text class="col-sub" x="1124" y="${fy+17}" text-anchor="end">TOKENS</text>`+head(16,MX+MW/2,96,'Output matrix',500)+head(5,LX,58,'Logits',1000)+head(6,TX,84,'÷ temperature',1450)+head(state.type==='top-k'?7:8,KX,58,cut,1900,' pk-head')+head(12,1545,68,'Softmax',2350);
+  s+=`<g class="${late(openP,500).trim()}"><text class="proj-more" x="${MX+MW/2}" y="${below}" text-anchor="middle">⋮</text><text class="mlp-size" x="${MX+MW/2}" y="${below+15}" text-anchor="middle">50,257 rows × 768 columns</text><text class="mlp-size" x="${MX+MW/2}" y="${below+27}" text-anchor="middle">one row per vocabulary token</text></g>`;
+  s+=`<g class="${late(openP,1000).trim()}"><text class="proj-more" x="${LX}" y="${below}" text-anchor="middle">⋮</text><text class="mlp-size" x="${LX}" y="${below+15}" text-anchor="middle">50,257 logits</text></g>`;
  }
  shown.forEach(r=>{
-  s+=`<g class="prob" data-rank="${r.rank}"><rect class="prob-hit" x="1034" y="${py(r.rank)-19}" width="${EP?462:196}" height="28"/><text class="pt" x="1124" y="${py(r.rank)}" text-anchor="end">${esc(showToken(r.token))}</text>`;
-  if(EP)s+=`<g class="num${late(openP,350+r.rank*40)}"><rect class="nbg" x="1146" y="${py(r.rank)-16}" width="58" height="22" rx="3"/><text class="pl" x="1175" y="${py(r.rank)}" text-anchor="middle">${r.logit.toFixed(2)}</text></g><g class="num${late(openP,800+r.rank*40)}"><rect class="nbg" x="1221" y="${py(r.rank)-16}" width="58" height="22" rx="3"/><text class="ps" x="1250" y="${py(r.rank)}" text-anchor="middle"></text></g><g class="num${late(openP,1250+r.rank*40)}"><rect class="nbg" x="1296" y="${py(r.rank)-16}" width="58" height="22" rx="3"/><text class="pk" x="1325" y="${py(r.rank)}" text-anchor="middle"></text></g>`;
-  s+=`<g class="${EP?`bar${late(openP,1700+r.rank*40)}`:'bar'}"><rect class="pb" x="${bx}" y="${py(r.rank)-6}" width="56" height="4" rx="2"/><text class="pp" x="${bx+6}" y="${py(r.rank)}"></text></g></g>`;
+  const y=py(r.rank);
+  s+=`<g class="prob" data-rank="${r.rank}"><rect class="prob-hit" x="1034" y="${y-19}" width="${EP?600:196}" height="28"/><text class="pt" x="1124" y="${y}" text-anchor="end">${esc(showToken(r.token))}</text>`;
+  if(EP){
+   const chip=(x,cls,text,at)=>`<g class="num${late(openP,at+r.rank*40)}"><rect class="nbg" x="${x-29}" y="${y-16}" width="58" height="22" rx="3"/><text class="${cls}" x="${x}" y="${y}" text-anchor="middle">${text}</text></g>`;
+   s+=`<g class="num${late(openP,500+r.rank*40)}"><rect class="proj-row" data-dim="row for “${esc(showToken(r.token))}” · vector(768)" x="${MX}" y="${y-13}" width="${MW}" height="18" rx="3"/>${illustrativeVector(r.id,12).map((v,k)=>`<rect x="${(MX+3+k*9.4).toFixed(1)}" y="${y-10}" width="7.4" height="12" rx="1.5" fill="${v>=0?'#7a9bec':'#d79278'}" opacity="${(0.18+0.55*Math.abs(v)).toFixed(2)}" style="pointer-events:none"/>`).join('')}</g>`;
+   s+=`<g class="num${late(openP,1000+r.rank*40)}"><text class="emb-op" x="${MX+MW+14}" y="${y+1}" text-anchor="middle">=</text></g>`+chip(LX,'pl',r.logit.toFixed(2),1000)+chip(TX,'ps','',1450)+chip(KX,'pk','',1900);
+  }
+  s+=`<g class="${EP?`bar${late(openP,2350+r.rank*40)}`:'bar'}"><rect class="pb" x="${bx}" y="${y-6}" width="56" height="4" rx="2"/><text class="pp" x="${bx+6}" y="${y}"></text></g></g>`;
  });
  s+=`</g></g></g></g></g></g></g>`;
  const svg=$('#tx-flow');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=s;svg.classList.toggle('expanded',!!X);svg.dataset.open=X||'';
  // the block frame's left and right edges: a block change contracts the old block into one edge and grows the new one out of the other
- svg.style.setProperty('--oxL',`${fx}px`);svg.style.setProperty('--oxR',`${fx+fw+dA}px`);svg.classList.remove('tracing');
+ svg.style.setProperty('--oxL',`${fx}px`);svg.style.setProperty('--oxR',`${fx+fw+dA+dM}px`);svg.classList.remove('tracing');
  $('#tx-tip').hidden=true;$('#tx-formula').hidden=true;
- paintProbs(list,picked);
+ paintMore(svg);paintProbs(list,picked);
  return picked;
 }
 // Temperature, top-k / top-p and Generate only touch the last step, so only that is repainted.
@@ -330,6 +372,7 @@ function swap(kind,dir){
  parts.forEach(g=>g.querySelectorAll('.cell:not(.masked)').forEach(c=>c.setAttribute('fill-opacity',dotOpacity(stageShade(+c.dataset.m,+c.dataset.q,+c.dataset.k)))));
  parts.forEach(g=>g.querySelectorAll('.leg').forEach(t=>{t.textContent=stageRange(+t.dataset.m)[t.classList.contains('leg-lo')?0:1];}));
  svg.querySelector('.block-label').textContent=blockLabel();
+ parts.forEach(g=>paintMore(g));
  svg.querySelector('.head-label').textContent=headLabel();
  svg.querySelector('title').textContent=`A sentence flowing through embedding, transformer block ${state.block+1} and the output probabilities`;
  syncSteppers();attention({play:onScreen($('#attn-stages'))});defaultResult();
@@ -419,7 +462,10 @@ function init(){
    const q=esc(showToken(tokens[i])),k=esc(showToken(tokens[j]));
    tip.innerHTML=m===0?`<b>${q} · ${k}</b>Query · Key = ${raw[i][j].toFixed(2)}`:m===1?`<b>${q} → ${k}</b>${j>i?'masked: a later token, −∞':`${raw[i][j].toFixed(2)} ÷ √${HEAD_DIM} = ${scaled[i][j].toFixed(2)}`}`:`<b>${q} → ${k}</b>${j>i?'masked: weight 0':`attention weight ${pct(weights[i][j])}`}`;
    cell.classList.add('hot');near(tip,cell,false);
-  }else tip.hidden=true;
+  }else{
+   const sized=e.target.closest('[data-dim]');
+   if(sized){tip.textContent=sized.dataset.dim;near(tip,sized,false);}else tip.hidden=true;
+  }
  });
  svg.addEventListener('focusin',e=>{const name=e.target.closest('.stage-name');if(name)showFormula(name);});
  // the same formula cards for the sampling controls, in the explorer bar and in the probabilities section

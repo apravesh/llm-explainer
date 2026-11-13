@@ -104,11 +104,35 @@ test('output section explains logits, temperature and the two filters around its
 });
 test('embedding and probabilities also open in place, one part at a time',async()=>{
  const app=await read('src/text-app.mjs'),css=await read('transformer.css');
- for(const zone of ['embedding','attention','probabilities'])assert.match(app,new RegExp(`data-zone="${zone}"`));
- assert.match(app,/const X=state\.expand,E=X==='attention',EE=X==='embedding',EP=X==='probabilities'/);
+ for(const zone of ['embedding','attention','mlp','probabilities'])assert.match(app,new RegExp(`data-zone="${zone}"`));
+ assert.match(app,/const X=state\.expand,E=X==='attention',EE=X==='embedding',EP=X==='probabilities',EM=X==='mlp'/);assert.doesNotMatch(app,/data-zone="projection"/,'projection and probabilities are one view');
  for(const part of ['Tokenization','Token embedding','Positional encoding','÷ temperature','Softmax','W<sub>E</sub>[ id<sub>i</sub> ] + W<sub>P</sub>[ i ]','exp(s<sub>i</sub>)'])assert.ok(app.includes(part),part);
- assert.match(app,/class="pl"[^`]*r\.logit\.toFixed\(2\)/);assert.match(app,/ps\.textContent=r\.scaled\.toFixed\(2\);g\.querySelector\('\.pk'\)\.textContent=r\.kept\?r\.scaled\.toFixed\(2\):'−∞'/);
+ assert.match(app,/chip\(LX,'pl',r\.logit\.toFixed\(2\),1000\)\+chip\(TX,'ps','',1450\)\+chip\(KX,'pk','',1900\)/);assert.match(app,/ps\.textContent=r\.scaled\.toFixed\(2\);g\.querySelector\('\.pk'\)\.textContent=r\.kept\?r\.scaled\.toFixed\(2\):'−∞'/);
  assert.match(app,/row&&state\.expand==='probabilities'/);assert.match(css,/#tx-flow:not\(\.expanded\) \[data-zone\]\{cursor:zoom-in\}/);
+});
+test('MLP opens into Linear → GELU → Linear, and bars report their size on hover',async()=>{
+ const app=await read('src/text-app.mjs');
+ for(const part of ['h = W<sub>1</sub> · x + b<sub>1</sub>','GELU(h) = h · Φ(h)','y = W<sub>2</sub> · GELU(h) + b<sub>2</sub>','3,072 × 768','768 × 3,072','output = x + y'])assert.ok(app.includes(part),part);
+ for(const dim of ['data-dim="vector(768)"','data-dim="vector(3072)"','weights · matrix(768 × 768)','this head · vector(64)'])assert.ok(app.includes(dim),dim);
+ assert.match(app,/size\(811,'768',0\)\+size\(859,'3,072',0\)\+size\(907,'768',0\)/,'the 3,072 middle is labelled in the overview');
+ assert.match(app,/const sized=e\.target\.closest\('\[data-dim\]'\)/);
+ // sizes: 12 heads of 64 make 768; the MLP widens four-fold
+ assert.equal(12*64,768);assert.equal(4*768,3072);
+});
+test('one output view: final vector × vocabulary-sized matrix = logits → temperature → filter → softmax',async()=>{
+ const app=await read('src/text-app.mjs');
+ assert.equal(app.split('W<sub>out</sub> : matrix(50,257 × 768)').length-1,2,'both hover cards state the matrix size');
+ for(const part of ['Output matrix','50,257 rows × 768 columns','one row per vocabulary token','50,257 logits','final vector of the last token · vector(768)','÷ temperature','Softmax'])assert.ok(app.includes(part),part);
+ assert.match(app,/head\(16,MX\+MW\/2,96,'Output matrix',500\)\+head\(5,LX,58,'Logits',1000\)\+head\(6,TX,84,'÷ temperature',1450\)/);
+ assert.match(app,/token embedding'\)/);assert.match(app,/positional encoding'\)/);assert.match(app,/data-dim="\$\{what\} · vector\(768\)"/);
+ assert.equal(50257*768,38597376);
+});
+test('the bars after the MLP match the blocks that remain',async()=>{
+ const app=await read('src/text-app.mjs');
+ const left=b=>12-1-b,bars=b=>Math.min(3,left(b)+1);   // b is zero-based, as in the page's state
+ assert.deepEqual([0,5,9,10,11].map(bars),[3,3,3,2,1]);assert.deepEqual([0,10,11].map(left),[11,1,0]);
+ assert.match(app,/const blocksLeft=\(\)=>BLOCKS-1-state\.block;/);assert.match(app,/bars=Math\.min\(3,left\+1\)/);
+ assert.match(app,/left\?`\$\{left\} MORE`:'LAST'/);assert.match(app,/parts\.forEach\(g=>paintMore\(g\)\)/);assert.doesNotMatch(app,/>11 MORE</);
 });
 test('temperature, sampling and Generate repaint only the probabilities',async()=>{
  const app=await read('src/text-app.mjs');
