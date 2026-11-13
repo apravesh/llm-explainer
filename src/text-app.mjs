@@ -8,10 +8,11 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pct=p=>p>=0.9995?'100%':p<=0?'0%':(p*100).toFixed(p<0.1?2:1)+'%';
 const BLOCKS=12,HEADS=12;
-const state={ex:0,block:0,head:0,temperature:0.8,type:'top-k',k:5,p:0.9,rnd:0.3,tok:0,sel:null,expand:null,anim:null,last:null};
+const state={ex:0,block:0,head:0,temperature:0.8,type:'top-k',k:5,p:0.9,rnd:0.3,tok:0,sel:null,at:null,expand:null,anim:null,last:null};
 const ex=()=>EXAMPLES[state.ex];
 const sampling=()=>state.type==='top-k'?{type:'top-k',value:state.k}:{type:'top-p',value:state.p};
-const rows=()=>probabilities(ex().top,{temperature:state.temperature,sampling:sampling()});
+// state.at: while a token is hovered in the overview, the last step shows what follows that token instead of the last one
+const rows=()=>probabilities(state.at===null?ex().top:ex().topAt[state.at],{temperature:state.temperature,sampling:sampling()});
 
 /* ---------- controls shared by the explorer and the probabilities lab ---------- */
 function controlsMarkup(i){
@@ -43,6 +44,10 @@ const chip=(kind,x,y,label,w)=>{
  const btn=(d,bx)=>`<g class="step" data-step="${d}" role="button" tabindex="0" aria-label="${d>0?'Next':'Previous'} ${kind}"><rect x="${bx}" y="${y-9}" width="18" height="18" rx="4"/><text x="${bx+9}" y="${y+4.5}" text-anchor="middle">${d>0?'›':'‹'}</text></g>`;
  return `<g class="chip" data-stepper="${kind}"><rect class="chip-bg" x="${x-7}" y="${y-11}" width="${w+64}" height="22"/>${btn(-1,x)}<text class="chip-label ${kind}-label" x="${x+25+w/2}" y="${y+3.5}" text-anchor="middle">${label}</text>${btn(1,x+32+w)}</g>`;
 };
+// one line per candidate word: fans out in a soft curve from the final vector (inside the shaded hover area), then runs level to the word
+const wordLine=(y1,y2,x2)=>`M978,${y1} C994,${y1} 1026,${y2} 1044,${y2} H${Math.max(1046,x2).toFixed(1)}`;
+const smallPct=p=>p>=0.0995?`${(p*100).toFixed(1)}%`:p>=0.0001?`${(p*100).toFixed(2)}%`:'<0.01%';
+const fanArea=(y,top,bot)=>`M976,${y-9} C994,${y-9} 1026,${top} 1044,${top} V${bot} C1026,${bot} 994,${y+9} 976,${y+9} Z`;
 const curve=(x1,y1,x2,y2)=>{const m=(x1+x2)/2;return `M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}`;};
 // Attention shown as its three stages (dot product → scaling · mask → softmax · dropout).
 // Returns the 0..1 shade of one dot, or null where the mask removed it.
@@ -87,6 +92,7 @@ function flow(){
  const {tokens,attn}=ex(),n=tokens.length,H=Y0+n*PITCH+48;
  const yc=i=>Y0+i*PITCH+PITCH/2;
  const {weights}=attentionStages(attn[state.block][state.head]);
+ state.at=null;   // a fresh drawing always shows the last token's prediction
  const list=rows(),picked=sample(list,state.rnd);
  const top=86,bottom=H-30,ch=bottom-top,fx=218,fy=48,fw=712,fh=H-fy-8;
  const gy={k:top+ch*0.2,q:top+ch*0.5,v:top+ch*0.82};
@@ -222,8 +228,8 @@ function flow(){
  s+=`<g class="stage" style="--d:6"><g data-expand="probabilities" role="button" tabindex="0" aria-label="Open the output step"><text class="col-title" x="1052" y="30">Probabilities</text></g></g>`;
  s+=`<g class="stage prob-part" style="--d:6">`;
  if(EP)s+=`<rect class="prob-bg" x="952" y="42" width="690" height="${py(9)+6}" rx="8"/>`;
- shown.forEach(r=>{s+=`<path class="fo pc" data-rank="${r.rank}" d="${curve(980,yc(last),1040,py(r.rank)-4)}"/>`;});
- if(!EP)s+=`<g class="stage-name fan-hit" data-formula="5" tabindex="0" role="button" aria-label="Output projection, a 50,257 × 768 matrix: show the formula"><path d="M974,${yc(last)-12} L1044,${py(0)-16} V${py(9)+8} L974,${yc(last)+12} Z"/></g>`;
+ shown.forEach(r=>{s+=`<path class="fo pc" data-rank="${r.rank}" data-y1="${yc(last)}" data-y2="${py(r.rank)-4}" d="${wordLine(yc(last),py(r.rank)-4,1040)}"/>`;});
+ if(!EP)s+=`<g class="stage-name fan-hit" data-formula="5" tabindex="0" role="button" aria-label="Output projection, a 50,257 × 768 matrix: show the formula"><path data-top="${py(0)-15}" data-bot="${py(12)+7}" d="${fanArea(yc(last),py(0)-15,py(12)+7)}"/></g>`;
  if(EP){
   const head=(k,x,w,label,at,cls='')=>`<g class="stage-name${cls}${late(openP,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+4}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+17}" text-anchor="middle">${label}</text></g>`;
   const below=py(9)+22;
@@ -242,6 +248,13 @@ function flow(){
   }
   s+=`<g class="${EP?`bar${late(openP,2350+r.rank*40)}`:'bar'}"><rect class="pb" x="${bx}" y="${y-6}" width="56" height="4" rx="2"/><text class="pp" x="${bx+6}" y="${y}"></text></g></g>`;
  });
+ // shown only while a token is hovered: the token that really follows it in the prompt, with the chance GPT-2 gave it
+ if(!EP)s+=`<g class="actual" hidden aria-hidden="true"><path class="ac" data-y2="56" d=""/><text class="pt" x="1124" y="60" text-anchor="end"></text><rect class="pb" x="${bx}" y="54" width="2" height="4" rx="2"/><text class="pp" x="${bx+6}" y="60"></text><text class="actual-tag" x="${bx}" y="46">ACTUAL NEXT TOKEN</text></g><text class="actual-tag actual-mark" x="${bx}" y="0" hidden aria-hidden="true">ACTUAL NEXT TOKEN</text>`;
+ // the ten shown are only the top of 50,257 candidates: a few more rows fade out below them
+ if(!EP)list.slice(10,13).forEach((r,k)=>{
+  const y=py(10+k);
+  s+=`<g class="more-row" style="opacity:${[0.5,0.26,0.1][k]}" aria-hidden="true"><path class="fo pc cut" data-y1="${yc(last)}" data-y2="${y-4}" d="${wordLine(yc(last),y-4,1040)}"/><text class="pt" x="1124" y="${y}" text-anchor="end">${esc(showToken(r.token))}</text><rect class="pb" x="${bx}" y="${y-6}" width="2" height="4" rx="2"/></g>`;
+ });
  s+=`</g></g></g></g></g></g></g>`;
  const svg=$('#tx-flow');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=s;svg.classList.toggle('expanded',!!X);svg.dataset.open=X||'';
  // the block frame's left and right edges: a block change contracts the old block into one edge and grows the new one out of the other
@@ -259,11 +272,45 @@ function paintProbs(list=rows(),picked=sample(list,state.rnd)){
   g.querySelector('.pb').style.transform=`scaleX(${(bw/56).toFixed(4)})`;
   const pp=g.querySelector('.pp');pp.textContent=pct(r.probability);pp.style.transform=`translateX(${bw.toFixed(1)}px)`;
   const ps=g.querySelector('.ps');if(ps){ps.textContent=r.scaled.toFixed(2);g.querySelector('.pk').textContent=r.kept?r.scaled.toFixed(2):'−∞';}
-  c.style.strokeWidth=(0.6+r.probability*7).toFixed(2);c.style.opacity=r.kept?(r===picked?0.95:0.45):0;
+  c.setAttribute('class',`fo pc${r.kept?'':' cut'}${r===picked?' on':''}`);
+  let x2=1040;try{x2=g.querySelector('.pt').getBBox().x-7;}catch{}
+  c.setAttribute('d',wordLine(+c.dataset.y1,+c.dataset.y2,x2));
  }
+ for(const m of svg.querySelectorAll('.more-row')){const c=m.querySelector('.pc');let x2=1040;try{x2=m.querySelector('.pt').getBBox().x-7;}catch{}c.setAttribute('d',wordLine(+c.dataset.y1,+c.dataset.y2,x2));}
  const kh=svg.querySelector('.pk-head');if(kh){kh.dataset.formula=state.type==='top-k'?7:8;kh.querySelector('text').textContent=state.type==='top-k'?'Top-k':'Top-p';}
- $('#tx-sentence').innerHTML=`${esc(ex().prompt)} <b>${esc(showToken(picked.token))}</b>`;
+ $('#tx-sentence').innerHTML=state.at===null?`${esc(ex().prompt)} <b>${esc(showToken(picked.token))}</b>`:`${esc(ex().tokens.slice(0,state.at+1).join(''))}<b>${esc(picked.token.replace(/\n/g,'\\n'))}</b>`;
  defaultResult(picked);
+ return picked;
+}
+// Hovering a token in the overview: its own vector feeds the last step, so the lines start from it and the
+// list shows what GPT-2 expects after that token. at=null puts the last token back.
+function paintAt(at){
+ const {tokens,topAt}=ex(),last=tokens.length-1;if(at!==null&&(at>=last||!topAt?.[at]))at=null;
+ if(state.at===at)return;state.at=at;
+ const svg=$('#tx-flow'),list=rows(),y=Y0+(at??last)*PITCH+PITCH/2;
+ svg.querySelectorAll('.prob[data-rank]').forEach(g=>{g.querySelector('.pt').textContent=showToken(list[+g.dataset.rank].token);});
+ svg.querySelectorAll('.more-row').forEach((m,k)=>{m.querySelector('.pt').textContent=showToken(list[10+k]?.token??'');});
+ svg.querySelectorAll('.pc').forEach(c=>{c.dataset.y1=y;});
+ const fan=svg.querySelector('.fan-hit path');if(fan)fan.setAttribute('d',fanArea(y,+fan.dataset.top,+fan.dataset.bot));
+ const picked=paintProbs(list),actual=svg.querySelector('.actual');
+ if(actual){
+  // if the real next token is already one of the ten guesses, that row is marked instead of adding a second one
+  const hit=at===null?-1:list.slice(0,10).findIndex(r=>r.token===tokens[at+1]),mark=svg.querySelector('.actual-mark');
+  actual.toggleAttribute('hidden',at===null||hit>=0);mark.toggleAttribute('hidden',hit<0);
+  // while a token is hovered, the one highlight belongs to the real next token, not to the drawn guess
+  if(at!==null){svg.querySelectorAll('.prob.sampled').forEach(g=>g.classList.remove('sampled'));svg.querySelectorAll('.pc.on').forEach(c=>c.classList.remove('on'));
+   $('#tx-sentence').innerHTML=`${esc(tokens.slice(0,at+1).join(''))}<b>${esc(tokens[at+1])}</b>`;}
+  if(hit>=0){
+   svg.querySelector(`.prob[data-rank="${hit}"]`).classList.add('is-actual','sampled');svg.querySelector(`.pc[data-rank="${hit}"]`).classList.add('is-actual','on');
+   mark.setAttribute('y',84+hit*30-13);
+  }else if(at!==null){
+   const [,p,rank]=ex().nextAt[at],bw=Math.max(2,p*56),pt=actual.querySelector('.pt'),pp=actual.querySelector('.pp');
+   pt.textContent=showToken(tokens[at+1]);actual.querySelector('.pb').setAttribute('width',bw.toFixed(1));
+   pp.textContent=smallPct(p);pp.setAttribute('x',(+actual.querySelector('.pb').getAttribute('x')+bw+6).toFixed(1));
+   let x2=1040;try{x2=pt.getBBox().x-7;}catch{}actual.querySelector('.ac').setAttribute('d',wordLine(y,56,x2));
+  }
+ }
+ if(at!==null){const [,p,rank]=ex().nextAt[at];$('#tx-result').textContent=`After “${showToken(tokens[at])}”, the prompt really continues with “${showToken(tokens[at+1])}”. GPT-2 gave that ${smallPct(p)}: its ${rank===1?'top guess':`guess no. ${rank.toLocaleString('en-US')}`} of 50,257, before temperature and top-k. Every token's vector is shaped to predict the token after it; only the last one is used to carry on the text.`;}
  return picked;
 }
 function refreshProbs(){state.sel=null;syncControls();probTable(paintProbs());}
@@ -430,9 +477,11 @@ function init(){
  svg.addEventListener('mouseover',e=>{
   // row tracing is for the overview only; with the three stages open, hovering explains one dot and nothing else moves
   if(state.expand)return;
-  const el=e.target.closest('[data-t]');if(!el)return;
+  const el=e.target.closest('[data-t]');
+  if(!el){if(state.at!==null&&e.target.closest('[data-zone="probabilities"]')){svg.classList.remove('tracing');svg.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));paintAt(null);}return;}
   const t=el.dataset.t;svg.classList.add('tracing');
   svg.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  paintAt(+t);
   const cell=e.target.closest('.cell');
   if(cell){
    const i=+cell.dataset.q,j=+cell.dataset.k,{tokens,attn}=ex(),w=attentionStages(attn[state.block][state.head]).weights[i][j];
@@ -472,7 +521,7 @@ function init(){
  for(const type of ['mouseover','focusin'])document.addEventListener(type,e=>{const el=e.target.closest?.('.tx-controls .has-formula');if(el)showFormula(el);});
  for(const type of ['mouseout','focusout'])document.addEventListener(type,e=>{if(e.target.closest?.('.tx-controls .has-formula'))formula.hidden=true;});
  svg.addEventListener('focusout',()=>{formula.hidden=true;});
- svg.addEventListener('mouseleave',()=>{svg.classList.remove('tracing');svg.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));tip.hidden=true;formula.hidden=true;svg.querySelectorAll('.cell.hot').forEach(c=>c.classList.remove('hot'));defaultResult();});
+ svg.addEventListener('mouseleave',()=>{paintAt(null);svg.classList.remove('tracing');svg.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));tip.hidden=true;formula.hidden=true;svg.querySelectorAll('.cell.hot').forEach(c=>c.classList.remove('hot'));defaultResult();});
  $('#attn-stages').addEventListener('mouseover',e=>{const c=e.target.closest('.c');if(c&&!attnBusy)attnResult(+c.dataset.q,+c.dataset.k);});
  $('#attn-play').addEventListener('click',()=>attention({play:true}));
  // play the steps the first time the grids scroll into view

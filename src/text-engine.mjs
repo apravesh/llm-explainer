@@ -21,7 +21,7 @@ export function probabilities(top,{temperature=1,sampling={type:'top-k',value:5}
 }
 // rnd in [0,1). Picks one kept token in proportion to its probability.
 export function sample(rows,rnd){let acc=0,last=null;for(const r of rows){if(!r.kept)continue;last=r;acc+=r.probability;if(rnd<acc)return r;}return last;}
-export const showToken=t=>t.replace(/^ /,'');
+export const showToken=t=>t.replace(/^ /,'').replace(/\n/g,'\\n');
 // Deterministic stand-in numbers for vectors the recording does not include
 // (embeddings, MLP activations). Same seed, same picture; labelled as illustrative on the page.
 export function illustrativeVector(seed,n=12){let s=(seed*2654435761+12345)>>>0;const out=[];for(let i=0;i<n;i++){s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;out.push(((s%2000)/1000-1));}return out.map(x=>Math.round(x*100)/100);}

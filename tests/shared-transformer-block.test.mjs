@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
-for(const name of ['vision.html','standalone.html'])test(`${name}: one shared selector labels the container around both transformer stages`,async()=>{
+for(const name of ['vision-live.html','standalone.html'])test(`${name}: one shared selector labels the container around both transformer stages`,async()=>{
  const html=await read(name);
  assert.equal((html.match(/data-inline-block-step="-1"/g)||[]).length,1);
  assert.equal((html.match(/data-inline-block-step="1"/g)||[]).length,1);

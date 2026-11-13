@@ -99,8 +99,8 @@ test('attention expands in place into three stages, each with a formula on hover
 });
 test('output section explains logits, temperature and the two filters around its table',async()=>{
  const html=await read('transformer.html'),out=html.slice(html.indexOf('<section id="output"'),html.indexOf('</section>',html.indexOf('<section id="output"')));
- assert.match(out,/<h2>Output probabilities<\/h2>/);
- for(const part of ['From vector to logits to probabilities','50,257','<code>logits</code>','<h3>Temperature</h3>','Temperature = 1.','Temperature below 1.','Temperature above 1.','<h3>Top-k and top-p</h3>','id="prob-table"','id="prob-card"','data-controls'])assert.ok(out.includes(part),part);
+ assert.match(out,/<h2>Output projection<\/h2>/);assert.ok(out.indexOf('One matrix multiplication')<out.indexOf('From logits to probabilities'));
+ for(const part of ['One matrix multiplication: 768 numbers become 50,257 scores','50,257 × 768','logits = W<sub>out</sub> · h','From logits to probabilities','50,257','<code>logits</code>','<h3>Temperature</h3>','Temperature = 1.','Temperature below 1.','Temperature above 1.','<h3>Top-k and top-p</h3>','id="prob-table"','id="prob-card"','data-controls'])assert.ok(out.includes(part),part);
 });
 test('embedding and probabilities also open in place, one part at a time',async()=>{
  const app=await read('src/text-app.mjs'),css=await read('transformer.css');
@@ -127,6 +127,11 @@ test('one output view: final vector × vocabulary-sized matrix = logits → temp
  assert.match(app,/token embedding'\)/);assert.match(app,/positional encoding'\)/);assert.match(app,/data-dim="\$\{what\} · vector\(768\)"/);
  assert.equal(50257*768,38597376);
 });
+test('rows fade out below the ten shown, to hint at the rest of the vocabulary',async()=>{
+ const app=await read('src/text-app.mjs');
+ assert.match(app,/if\(!EP\)list\.slice\(10,13\)\.forEach/);assert.match(app,/class="more-row" style="opacity:\$\{\[0\.5,0\.26,0\.1\]\[k\]\}" aria-hidden="true"/);
+ assert.match(app,/const wordLine=\(y1,y2,x2\)=>/,'one line per word');
+});
 test('the bars after the MLP match the blocks that remain',async()=>{
  const app=await read('src/text-app.mjs');
  const left=b=>12-1-b,bars=b=>Math.min(3,left(b)+1);   // b is zero-based, as in the page's state
@@ -140,7 +145,7 @@ test('temperature, sampling and Generate repaint only the probabilities',async()
  const input=app.slice(app.indexOf("document.addEventListener('input'"),app.indexOf("document.addEventListener('click'"));
  assert.match(input,/refreshProbs\(\);/);assert.doesNotMatch(input,/render\(/);
  const paint=app.slice(app.indexOf('function paintProbs'),app.indexOf('function refreshProbs'));
- assert.doesNotMatch(paint,/innerHTML=s|flow\(\)/,'the diagram is not rebuilt');
+ assert.doesNotMatch(paint,/svg\.innerHTML=s|flow\(\)/,'the diagram is not rebuilt');
 });
 test('intro and text pages end without a recap block',async()=>{
  for(const page of ['what-is-an-llm.html','transformer.html']){const html=await read(page);assert.doesNotMatch(html,/TO REMEMBER|takeaways-intro|class="intro-cards"/);assert.match(html,/<section class="lesson-section notes-section"><details class="further">/);}
@@ -153,7 +158,41 @@ test('explorer is full width, and a block or head change redraws only that part'
  assert.match(css,/\.swap\.head-part\{animation:tx-head-in/);assert.match(css,/tx-head-in \.95s/);assert.match(css,/@keyframes tx-block-in\{0%\{transform:scaleX\(0\)/);assert.match(css,/@keyframes tx-block-out\{[^}]*\}[^}]*\}100%\{transform:scaleX\(0\)/);assert.match(css,/\[data-dir=next\] \.ghost\{transform-origin:var\(--oxL\)/);assert.match(css,/\[data-dir=next\] \.swap:is\(\.head-part,\.block-part\)\{transform-origin:var\(--oxR\)/);assert.match(css,/#tx-flow \.frame\{[^}]*stroke-dasharray/);assert.match(app,/chip\('block',/);assert.match(app,/chip\('head',/);assert.doesNotMatch(await read('transformer.html'),/id="tx-lab">[\s\S]*?class="tx-steppers"[\s\S]*?id="tx-result"/);assert.match(css,/#tx-flow \.cell\{transition:fill-opacity/);
 });
 test('every page header and the home page link to the text chapter',async()=>{
- for(const page of ['index.html','what-is-an-llm.html','llm-use-cases.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','transformer.html'])
+ for(const page of ['index.html','what-is-an-llm.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','transformer.html'])
   assert.match(await read(page),/<span class="nav-group">Architecture<\/span><a href="transformer\.html"[^>]*>Transformer<\/a><a href="vision\.html"/);
  assert.match(await read('index.html'),/class="chapter-link" href="transformer\.html"/);
+});
+
+test('the attention section opens with a small math-at-a-glance diagram; the MLP row names its matrices',async()=>{
+ const html=await read('transformer.html'),css=await read('transformer.css');
+ const a=html.indexOf('id="attn-math"');assert.ok(!html.includes('id="mlp-math"'));
+ assert.ok(a>html.indexOf('<section id="attention"')&&a<html.indexOf('Step 1 · Query, Key and Value'));
+ for(const part of ['<small>X (input)</small>','<small>· W₁</small>','<small>· W₂</small>','<small>+ X</small>'])assert.ok(html.includes(part),part);
+ for(const part of ['QKᵀ / √64','mask → softmax','× V','all 12 heads → concat → Wₒ + residual H → H′','12 heads × 64 features → 768'])assert.ok(html.includes(part),part);
+ assert.match(css,/\.tx-math svg\{/);
+});
+
+test('hovering a token shows what GPT-2 expects after it; leaving puts the last token back',async()=>{
+ const {EXAMPLES}=await import('../src/text-data.mjs'),{showToken}=await import('../src/text-engine.mjs'),app=await read('src/text-app.mjs');
+ for(const e of EXAMPLES){
+  assert.equal(e.topAt.length,e.tokens.length-1,'one recorded list per earlier token');
+  for(const list of e.topAt){assert.equal(list.length,20);for(let k=1;k<list.length;k++)assert.ok(list[k-1][2]>=list[k][2],'sorted by logit');}
+ }
+ assert.equal(EXAMPLES[0].topAt[2][0][0],'powers','after “em”, GPT-2 expects “powers”');
+ assert.equal(showToken('\n'),'\\n');
+ assert.match(app,/const rows=\(\)=>probabilities\(state\.at===null\?ex\(\)\.top:ex\(\)\.topAt\[state\.at\]/);
+ assert.match(app,/function paintAt\(at\)/);assert.match(app,/paintAt\(\+t\);/);
+ assert.match(app,/addEventListener\('mouseleave',\(\)=>\{paintAt\(null\);/);
+ assert.match(app,/state\.at=null;   \/\/ a fresh drawing/);
+});
+
+test('a hovered token also shows the token that really follows it, with the chance GPT-2 gave it',async()=>{
+ const {EXAMPLES}=await import('../src/text-data.mjs'),app=await read('src/text-app.mjs');
+ for(const e of EXAMPLES){assert.equal(e.nextAt.length,e.tokens.length-1);
+  e.nextAt.forEach(([logit,p,rank],i)=>{assert.ok(p>0&&p<1&&rank>=1&&rank<=50257);
+   const k=e.topAt[i].findIndex(r=>r[1]===e.tokenIds[i+1]);if(rank<=20){assert.equal(k,rank-1,'rank agrees with the recorded top list');assert.ok(Math.abs(e.topAt[i][k][2]-logit)<0.002);}else assert.equal(k,-1);});}
+ assert.deepEqual(EXAMPLES[0].nextAt[2].slice(1),[0.423,1],'“powers” after “em”');
+ assert.match(app,/class="actual" hidden aria-hidden="true"/);assert.ok(app.includes('ACTUAL NEXT TOKEN'));
+ assert.match(app,/const hit=at===null\?-1:list\.slice\(0,10\)\.findIndex\(r=>r\.token===tokens\[at\+1\]\)/,'a guess that is the real next token is marked in place');
+ assert.match(app,/actual\.toggleAttribute\('hidden',at===null\|\|hit>=0\)/);
 });

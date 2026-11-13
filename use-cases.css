@@ -1,4 +1,4 @@
-/* "What are LLMs used for?" */
+/* Overview page: use cases and chat with web search */
 .use-tabs{display:flex;flex-wrap:wrap;gap:8px}
 .use-tabs button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:#fff;border:1.5px solid #dfe6f0;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:500;color:#55708f}
 .use-tabs button small{font:8px var(--mono);letter-spacing:1.1px;color:#a3b1c5;font-weight:400}
@@ -8,6 +8,9 @@
 .use-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:4px 0 20px}
 .use-facts>div{font-size:13px;line-height:1.5;color:#293647;padding-left:12px;border-left:2px solid #d5deec}
 .use-facts small{display:block;font:8px var(--mono);letter-spacing:1.1px;color:#8a9bb1;margin-bottom:3px}
+.use-panel[hidden],#use-controls[hidden]{display:none}
+.use-desc{max-width:780px;font-size:14px;line-height:1.8;color:#5b6b80;margin:0 0 18px}
+.use-desc code{font:13px var(--mono);color:#293647;background:#f1f4f9;border-radius:4px;padding:1px 5px}
 .use-screen>*{min-height:200px}
 .use-screen .story-paper{padding:22px 24px}
 .use-screen .story-text{font-size:16px;line-height:1.8}

@@ -67,7 +67,7 @@ test('fixed fast playback includes the complete dot product without dropping ter
  const halfway=trace.prefix[multiplicationPlaybackCount(1024,0,1200)],complete=trace.prefix[multiplicationPlaybackCount(1024,0,2400)];assert.equal(halfway,trace.prefix[512]);assert.equal(complete,trace.total);assert.equal(trace.prefix.length,1025);
 });
 test('served and bundled app keep full dimensions and fixed fast playback and row rulers',async()=>{
- const at=name=>new URL('../'+name,import.meta.url),html=await readFile(at('vision.html'),'utf8'),bundle=await readFile(at('standalone.html'),'utf8');
+ const at=name=>new URL('../'+name,import.meta.url),html=await readFile(at('vision-live.html'),'utf8'),bundle=await readFile(at('standalone.html'),'utf8');
  assert.match(html,/src="src\/full-app.mjs"/);assert.match(bundle,/function matrixRowGuides/);assert.match(bundle,/MULTIPLICATION_PLAYBACK_MS=2400/);assert.doesNotMatch(bundle,/data-fm-speed|Multiplication animation speed|Fast · 2.4 s|Slow · 7.2 s/);assert.match(bundle,/width:1024,heads:16,headWidth:64,ffWidth:4096,depth:24,decoderWidth:5120/);assert.doesNotMatch(bundle,/function teachingScaleMarkup|24 features, so you can follow the math/);
 });
 

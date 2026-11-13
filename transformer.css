@@ -147,7 +147,9 @@
 #tx-flow .prob.sampled .pb{fill:#7f58a3}
 #tx-flow .prob .pp{transition:transform .35s ease,fill .25s}
 #tx-flow .prob .pt{transition:fill .25s}
-#tx-flow .pc{transition:stroke-width .35s ease,opacity .3s ease}
+#tx-flow .pc{fill:none;stroke-linejoin:round;stroke-width:1.3;opacity:.75;transition:stroke-width .35s ease,opacity .3s ease,stroke .3s ease}
+#tx-flow .pc.cut{stroke:#cdd3df;opacity:1}
+#tx-flow .pc.on{stroke:#7f58a3;stroke-width:2.6;opacity:1}
 @media(prefers-reduced-motion:reduce){#tx-flow .prob .pb,#tx-flow .prob .pp,#tx-flow .prob .pt,#tx-flow .pc{transition:none}}
 /* article-style section copied from Transformer Explainer */
 .tx-article>p,.tx-article>h3,.tx-article>figure{max-width:780px}
@@ -310,3 +312,32 @@
 #tx-flow .proj .nbg{fill:#f1f4f8}
 #tx-flow .proj-more{font-size:14px;fill:#9aabc1}
 #tx-flow .prob-part .proj-row{fill:#f4f6fb;stroke:#d3dcee}
+/* more candidates than the ten shown: rows that fade out */
+#tx-flow .more-row{pointer-events:none}#tx-flow .more-row .pt{fill:#9aabc1}#tx-flow .more-row .pb{fill:#cdd3df}
+/* the math at a glance: small process diagrams, as on the Vision page */
+.tx-math{margin:18px 0 26px;padding:14px 18px 12px;max-width:780px;background:#fbfcfe;border:1px solid #e3e9f2;border-radius:9px}
+.tx-math .string-label{margin:0 0 10px}
+.tx-math svg{display:block;width:100%;height:auto;overflow:visible}
+.tx-math .mm-title{font:14px var(--mono);fill:#607b9f;text-anchor:middle}
+.tx-math .mm-caption{font:10.5px var(--sans);fill:#8c9db4;text-anchor:middle}
+.tx-math .mm-node rect{fill:#f4f7fc;stroke:#dce4f0;stroke-width:1}
+.tx-math .mm-q rect{fill:#edf3fc;stroke:#d4e0f2}.tx-math .mm-q .mm-title{fill:#6386bc}
+.tx-math .mm-k rect{fill:#faf1eb;stroke:#ecded2}.tx-math .mm-k .mm-title{fill:#b4917d}
+.tx-math .mm-v rect,.tx-math .mm-mix rect{fill:#eff7f2;stroke:#d6e7dd}.tx-math .mm-v .mm-title,.tx-math .mm-mix .mm-title{fill:#749884}
+.tx-math .mm-weights rect{fill:#f4effa;stroke:#e0d5ec}.tx-math .mm-weights .mm-title{fill:#88729f}
+.tx-math .mm-wires{fill:none;stroke:#9aacc6;stroke-width:1.4}.tx-math .mm-vwire{stroke:#89aa9a}
+.tx-math .mm-residual{font:11px var(--mono);fill:#93a1b4;text-anchor:middle}
+.tx-math figcaption{margin-top:10px;font:12.5px/1.6 var(--sans);color:#7b8ba1;text-align:center}
+.tx-math figcaption b{display:block;font:500 11px var(--mono);color:#607b9f;letter-spacing:.02em}
+/* MLP row: what each arrow multiplies by, written under it */
+.mlp-arrow{display:flex;flex-direction:column;align-items:center}
+.mlp-arrow::after{order:1}
+.mlp-arrow small{order:2;font:500 12px var(--mono);color:#607b9f;margin-top:2px}
+.mlp-arrow.plus small{color:#7f58a3}
+.mlp-vec small{font:500 11px var(--mono);color:#607b9f;margin-top:-2px}
+/* hovered token: the token that really follows it is the highlighted one, in the list or on a row above it */
+#tx-flow .actual .pt,#tx-flow .actual .pp{fill:#7f58a3;font-weight:600}#tx-flow .actual .pp{font-family:var(--mono);font-size:11px}
+#tx-flow .actual .pb{fill:#7f58a3}
+#tx-flow .actual .ac{fill:none;stroke:#7f58a3;stroke-width:2.6}
+#tx-flow .actual-tag{font:8.5px var(--mono);letter-spacing:.08em;fill:#9a7fb8}
+#tx-flow .actual[hidden],#tx-flow .actual-mark[hidden]{display:none}

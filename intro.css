@@ -47,7 +47,7 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 @keyframes box-shine{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
 @keyframes row-in{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 @keyframes bar-grow{from{transform:scaleX(0)}to{transform:none}}
-/* 02 loop */
+/* 01 loop */
 .grown-text{font:500 22px/1.5 var(--sans);letter-spacing:-.3px;color:#293647;min-height:66px;margin:0 0 6px}
 .grown-text .grown,.story-text .grown{color:#3667e4}
 .grown-text .new,.story-text .new{background:#eaf0ff;border-radius:4px;animation:word-pop .45s both;display:inline-block}
@@ -58,13 +58,13 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 #loop-lab.done .loop-back{display:none}
 #loop-lab .lab-result{margin-top:26px}
 #loop-count{margin-left:auto}
-/* 03 story */
+/* 02 story (creative writing use case) */
 .story-paper{background:#fffdf8;border:1px solid #ece6d8;border-radius:10px;padding:26px 30px;min-height:190px;box-shadow:0 2px 0 #f3eee2}
 .story-text{font:18px/1.9 Georgia,"Times New Roman",serif;color:#293647;max-width:820px}
 .story-text .given{font-weight:700}
 .story-meta{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#7c8ca3}
 .story-meta b{font-weight:500;color:#1f3f8f}
-/* 04 chat */
+/* 02 chat use case */
 .chat-views{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1.25fr);gap:14px;align-items:start}
 .chat-views-arrow{align-self:center;text-align:center;font-size:20px;color:#9aa8ba}
 .chat-window{display:flex;flex-direction:column;gap:10px;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fbfcfe;min-height:168px}
@@ -119,3 +119,6 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 .mc-bars-old{position:absolute;left:0;right:0;pointer-events:none;background:#fff}
 .mc-bars-old .mc-row{animation:none!important;opacity:1}
 .mc-bars-old .mc-track i{animation:none!important}
+/* text into the box stays on one line; earlier words give way to the ellipsis */
+@media(min-width:901px){.mc-words{flex-wrap:nowrap}.mc-word,.mc-more{flex:none;white-space:nowrap}}
+@media(min-width:901px){#loop-machine{min-height:185px;align-content:center}}

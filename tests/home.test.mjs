@@ -2,10 +2,10 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,access} from 'node:fs/promises';
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
-const [home,vision,moe,build,standalone]=await Promise.all(['index.html','vision.html','moe.html','build.mjs','standalone.html'].map(read));
+const [home,vision,moe,build,standalone]=await Promise.all(['index.html','vision-live.html','moe.html','build.mjs','standalone.html'].map(read));
 test('homepage links to text, vision, and MoE in the requested order',()=>{
  const list=home.slice(home.indexOf('<section id="chapters"')).match(/<ol class="chapter-list">([\s\S]*?)<\/ol>/)?.[1];assert.ok(list);
- assert.deepEqual([...home.slice(home.indexOf('<section id="intro"'),home.indexOf('<section id="chapters"')).matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['what-is-an-llm.html','llm-use-cases.html']);
+ assert.deepEqual([...home.slice(home.indexOf('<section id="intro"'),home.indexOf('<section id="chapters"')).matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['what-is-an-llm.html','tokenization.html']);
  assert.deepEqual([...list.matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['transformer.html','vision.html','moe.html','analytics.html']);
  assert.match(home,/BY POLO CLUB/);assert.doesNotMatch(home,/<script/);
 });
@@ -15,14 +15,14 @@ test('local chapter and stylesheet links resolve from the project subpath',async
  }
 });
 test('MoE is a working chapter with routing controls, disclosure, and a route home',()=>{
- assert.match(moe,/id="moe-explorer"/);assert.match(moe,/id="moe-k"/);assert.match(moe,/src="src\/moe-app.mjs"/);assert.match(moe,/aria-label="LLM Explainer home"/);assert.doesNotMatch(moe,/Currently under construction/);assert.match(moe,/untrained/i);
+ assert.match(moe,/id="explorer"/);assert.match(moe,/data-zone="moe"|moe-page-app\.mjs/);assert.match(moe,/src="src\/moe-page-app.mjs"/);assert.match(moe,/aria-label="LLM Explainer home"/);assert.doesNotMatch(moe,/Currently under construction/);assert.match(moe,/untrained/i);
 });
 test('the complete vision chapter survives as a separate page with back navigation',()=>{
  for(const id of ['explorer','architecture','image-grid','rope-lab','comparison'])assert.match(vision,new RegExp(`id="${id}"`));
  assert.equal((vision.match(/data-stage="\d"/g)||[]).length,7);assert.match(vision,/href="\.\/" aria-label="LLM Explainer home"/);assert.match(vision,/src="src\/full-app.mjs"/);
 });
 test('offline builder reads the vision page, never the blog homepage',()=>{
- assert.match(build,/readFile\(at\('vision.html'\),'utf8'\)/);assert.doesNotMatch(build,/readFile\(at\('index.html'\)/);
+ assert.match(build,/readFile\(at\('vision-live.html'\),'utf8'\)/);assert.doesNotMatch(build,/readFile\(at\('index.html'\)/);
  assert.match(standalone,/id="explorer"/);assert.doesNotMatch(standalone,/class="chapter-list"/);
 });
 

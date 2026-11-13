@@ -29,7 +29,7 @@ test('resources list the course links and open in a new tab',()=>{
   assert.match(html,new RegExp(`<li><a href="${url.replace(/[.?]/g,'\\$&')}" target="_blank" rel="noopener">`));
 });
 test('glossary is linked from every header and the home page',async()=>{
- for(const page of ['index.html','what-is-an-llm.html','llm-use-cases.html','transformer.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','glossary.html'])
+ for(const page of ['index.html','what-is-an-llm.html','transformer.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','glossary.html'])
   assert.match(await read(page),/<span class="nav-group">Reference<\/span><a href="glossary\.html"[^>]*>Glossary<\/a><\/nav>/);
  const home=await read('index.html');assert.match(home,/<section id="reference"[\s\S]*class="chapter-link" href="glossary\.html"/);assert.doesNotMatch(home,/<script/);
 });

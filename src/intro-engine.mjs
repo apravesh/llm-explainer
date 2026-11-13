@@ -42,6 +42,17 @@ const MAX_CONTEXT = 12;
  * leads but shorter matches keep a real chance. That keeps random stories varied, while long contexts
  * (a whole chat question) still decide the top pick.
  */
+const FLOOR_SHARE = 0.01, FLOOR_WORDS = 8;
+let commonWords = null;
+const COMMON_WORDS = {[Symbol.iterator]() {
+ if (!commonWords) {
+  const counts = new Map();
+  for (const line of CORPUS) for (const t of line) if (/^[a-z]+$/i.test(t)) counts.set(t, (counts.get(t) || 0) + 1);
+  const top = [...counts].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, FLOOR_WORDS), total = top.reduce((n, [, c]) => n + c, 0);
+  commonWords = top.map(([t, c]) => [t, c / total]);
+ }
+ return commonWords[Symbol.iterator]();
+}};
 export function predict(context, {top = 5} = {}) {
  if (!Array.isArray(context) || !context.length) throw new RangeError('Need at least one context word');
  const scores = new Map();
@@ -62,7 +73,15 @@ export function predict(context, {top = 5} = {}) {
  if (!scores.size) return {candidates: [], matched: 0};
  const sum = [...scores.values()].reduce((a, b) => a + b, 0);
  const all = [...scores].map(([token, s]) => ({token, p: s / sum})).sort((a, b) => b.p - a.p || (a.token < b.token ? -1 : 1));
- return {candidates: all.slice(0, top), all, matched};
+ // A real model gives every word some chance. When the corpus offers fewer than `top` continuations, the list
+ // shown is filled with its most common words at a token chance (well under 1%, marked rare). They can be
+ // picked by hand but are never drawn at random: `all` stays the distribution that choose() samples from.
+ const candidates = all.slice(0, top);
+ for (const [token, share] of COMMON_WORDS) {
+  if (candidates.length >= top) break;
+  if (!scores.has(token)) candidates.push({token, p: FLOOR_SHARE * share, rare: true});
+ }
+ return {candidates, all, matched};
 }
 
 /** Deterministic uniform numbers in [0, 1) so "roll the dice" replays identically. */

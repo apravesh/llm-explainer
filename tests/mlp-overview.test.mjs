@@ -20,7 +20,7 @@ test('process uses one keyboard-accessible expansion control and stays attached 
  assert.match(html,/data-block="5"/);assert.match(html,/aria-label="Expand Gated MLP process flow"/);assert.match(html,/data-expand-step="4"/);assert.match(html,/aria-controls="stage-expansion-4"/);assert.match(html,/aria-expanded="true"/);
 });
 test('live and offline overviews use process-only attention and MLP',async()=>{
- for(const file of ['vision.html','standalone.html']){const html=await read(file);assert.match(html,/id="attention-process-viz"/);assert.doesNotMatch(html,/<div class="qkv-column">|<canvas id="attention-matrix"|class="ca-map"/);}
+ for(const file of ['vision-live.html','standalone.html']){const html=await read(file);assert.match(html,/id="attention-process-viz"/);assert.doesNotMatch(html,/<div class="qkv-column">|<canvas id="attention-matrix"|class="ca-map"/);}
  const app=await read('src/full-app.mjs');assert.match(app,/attentionProcessMarkup\(run,state\)/);assert.doesNotMatch(app,/compactAttentionMarkup|mountOverviewWindow|createMlpOverview/);
  assert.match(app,/mlpProcessMarkup\(run,state\)/);assert.match(await read('standalone.html'),/function mlpProcessMarkup/);
 });

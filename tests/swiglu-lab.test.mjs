@@ -60,7 +60,7 @@ test('reduced motion displays the complete flow without running a trace',()=>{
 });
 test('standalone SwiGLU section is removed while RoPE, comparison, and main MLP remain',async()=>{
  const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
- for(const file of ['vision.html','standalone.html']){
+ for(const file of ['vision-live.html','standalone.html']){
   const html=await read(file);
   assert.doesNotMatch(html,/id="swiglu-lab"|id="swiglu-demo"|SwiGLU: a second/);
   assert.ok(html.indexOf('id="rope-lab"')<html.indexOf('id="comparison"'));

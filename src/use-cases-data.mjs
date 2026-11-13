@@ -1,28 +1,23 @@
-// Scripted illustrations for the "What are LLMs used for?" page. Nothing here is live model output:
+// Use cases and the web-search demo for the Overview page (what-is-an-llm.html). Apart from the two live labs, Nothing here is live model output:
 // each example is hand-written to show the SHAPE of the text a model receives and continues.
 // who: 'app' (text the application adds), 'user' (what the person typed), 'model' (what the LLM writes),
 // 'tool' (a result the application pastes in after running something for the model).
 
 export const USE_CASES = Object.freeze([
- {key: 'chat', label: 'Chatbot', kicker: 'ASK AND ANSWER',
-  give: 'A question or request.', writes: 'A reply, then stops.', where: 'Assistants such as ChatGPT, Claude and Gemini.',
-  point: 'The app wraps your message in a script, exactly as on the previous page. The reply is the continuation.',
-  segments: [
-   {who: 'app', text: 'User: '}, {who: 'user', text: 'Suggest a name for a small bakery.'}, {who: 'app', text: '\nAssistant: '},
-   {who: 'model', text: 'How about “Rise & Shine Bakery”? It sounds warm and hints at fresh bread every morning.'}]},
- {key: 'writing', label: 'Creative writing', kicker: 'CONTINUE MY TEXT',
+ // The first two are live labs on the page, driven by the page's toy box (src/intro-app.mjs), so they have no script here.
+ {key: 'writing', label: 'Creative writing', kicker: 'CONTINUE MY TEXT', lab: 'stories', note: 'This page’s toy box · not a real LLM',
   give: 'The opening of a story, email or article.', writes: 'What could plausibly come next.', where: 'Writing tools and editors with a “continue” or “draft” button.',
-  point: 'No script is needed. Your text is the beginning, and the model simply keeps going in the same voice.',
-  segments: [
-   {who: 'user', text: 'The lighthouse keeper had not seen a ship in forty days.'},
-   {who: 'model', text: ' Then, one grey morning, a small red sail appeared on the horizon, moving steadily against the wind.'}]},
- {key: 'code', label: 'Code completion', kicker: 'FINISH THIS LINE',
+  point: 'No script is needed. Your text is the beginning, and the box simply keeps going.', segments: []},
+ {key: 'chat', label: 'Chat', kicker: 'ASK AND ANSWER', lab: 'chat', note: 'This page’s toy box · not a real LLM',
+  give: 'A question or request.', writes: 'A reply, then stops.', where: 'Assistants such as ChatGPT, Claude and Gemini.',
+  point: '', segments: []},
+ {key: 'code', label: 'Code completion', kicker: 'FINISH THIS LINE', note: 'Hand-written illustration · not live model output',
   give: 'The code above your cursor.', writes: 'The next line or block of code.', where: 'Editor assistants such as GitHub Copilot.',
   point: 'Code is text too. The editor sends what you have typed so far, and shows the continuation as a grey suggestion you can accept.',
   segments: [
    {who: 'user', text: 'def is_even(n):\n    """Return True if n is even."""\n'},
    {who: 'model', text: '    return n % 2 == 0'}]},
- {key: 'agent', label: 'Agentic workflow', kicker: 'DO A TASK IN STEPS',
+ {key: 'agent', label: 'Agentic workflow', kicker: 'DO A TASK IN STEPS', note: 'Hand-written illustration · not live model output',
   give: 'A goal, and a list of tools it may ask for.', writes: 'One tool request at a time, then a summary.', where: 'Coding agents, research assistants and task automation.',
   point: 'The model cannot run anything itself. It writes a request, the app runs it and pastes the result into the text, and the model continues from there. That loop is what “agent” means.',
   segments: [

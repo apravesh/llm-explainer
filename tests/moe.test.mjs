@@ -55,10 +55,10 @@ test('invalid routing configuration and hidden states are rejected',()=>{
  const {model,tokens}=fixture();assert.throws(()=>runMoeToken([1],model));assert.throws(()=>runMoeToken(Array(8).fill(NaN),model));assert.throws(()=>runMoeToken(tokens[0].hidden,model,{k:0}));assert.throws(()=>runMoeToken(tokens[0].hidden,model,{weighting:'bogus'}));assert.throws(()=>runMoeToken(tokens[0].hidden,model,{mode:'bogus'}));
 });
 test('MoE UI discloses scope, synthetic inputs, router conventions, and inactive experts',async()=>{
- const html=await readFile(new URL('../moe.html',import.meta.url),'utf8');for(const id of ['moe-explorer','moe-k','moe-token-list','router-bars','expert-list','moe-inspector','dispatch-table','cost-comparison'])assert.match(html,new RegExp(`id="${id}"`));assert.match(html,/untrained/i);assert.match(html,/not a reproduction of Switch or Mixtral/);assert.match(html,/no capacity limit, token dropping/);assert.doesNotMatch(html,/Currently under construction/);
+ const html=await readFile(new URL('../moe-live.html',import.meta.url),'utf8');for(const id of ['moe-explorer','moe-k','moe-token-list','router-bars','expert-list','moe-inspector','dispatch-table','cost-comparison'])assert.match(html,new RegExp(`id="${id}"`));assert.match(html,/untrained/i);assert.match(html,/not a reproduction of Switch or Mixtral/);assert.match(html,/no capacity limit, token dropping/);assert.doesNotMatch(html,/Currently under construction/);
 });
 test('MoE page starts with top-2 in both HTML and runtime while retaining top-1',async()=>{
- const html=await readFile(new URL('../moe.html',import.meta.url),'utf8'),app=await readFile(new URL('../src/moe-app.mjs',import.meta.url),'utf8');
+ const html=await readFile(new URL('../moe-live.html',import.meta.url),'utf8'),app=await readFile(new URL('../src/moe-app.mjs',import.meta.url),'utf8');
  assert.match(html,/<option value="2" selected>Top-2 · mix two<\/option>/);
  assert.match(html,/<option value="1">Top-1 · simplest<\/option>/);
  assert.match(app,/mode:'sparse',k:2,weighting:'selected'/);

@@ -54,7 +54,7 @@ for(const model of ['pixtral','vit'])test(`${model}: selected token's block outp
 });
 test('served and offline interfaces expose only inline block arrows, without the bar or slider',async()=>{
  const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
- const [html,vision,app,nav]=await Promise.all(['standalone.html','vision.html','src/full-app.mjs','src/block-navigation.mjs'].map(read));
+ const [html,vision,app,nav]=await Promise.all(['standalone.html','vision-live.html','src/full-app.mjs','src/block-navigation.mjs'].map(read));
  for(const page of [html,vision]){assert.match(page,/data-inline-block-step/);assert.doesNotMatch(page,/id="layer"|id="layer-number"|ENCODER DEPTH|id="block-navigator"/);}
  assert.match(html,/function createInlineBlockNavigation/);assert.doesNotMatch(html,/inlineBlockControlsMarkup/);
  assert.doesNotMatch(app,/createBlockNavigation|\$\('#layer'\)/);

@@ -17,6 +17,15 @@ function grownText(tokens, start, markNewest) {
 
 /* ---------- The machine: words in → black box → a list of guesses ---------- */
 // `pick` is the word the loop will take next (highlighted); bars are buttons when `choosable`.
+// The text going into the box stays on one line: if it does not fit, the earliest words give way to "…".
+function fitWords(el) {
+ const row = el.querySelector('.mc-words'); if (!row || getComputedStyle(row).flexWrap !== 'nowrap') return;
+ const left = row.getBoundingClientRect().left;
+ while (row.querySelectorAll('.mc-word').length > 2 && row.firstElementChild.getBoundingClientRect().left < left - 0.5) {
+  row.querySelector('.mc-word').remove();
+  if (!row.querySelector('.mc-more')) row.insertAdjacentHTML('afterbegin', '<span class="mc-more">…</span>');
+ }
+}
 function machine(el, context, prediction, {pick = null, choosable = false, fresh = false, newest = -1, step = false} = {}) {
  const shown = context.slice(-9), hidden = context.length - shown.length;
  let rows = prediction.candidates.slice(0, 5);
@@ -33,21 +42,10 @@ function machine(el, context, prediction, {pick = null, choosable = false, fresh
   const cls = `mc-row ${c.token === pick ? 'pick' : ''}`, style = `style="--d:${i * 90}ms"`;
   return choosable ? `<button type="button" class="${cls}" ${style} data-choose="${esc(c.token)}" aria-label="Choose ${c.token === END ? 'stop' : esc(c.token)}, ${pct(c.p)}">${inner}</button>` : `<div class="${cls}" ${style}>${inner}</div>`;
  }).join('') : '<p class="small">Nothing more to add.</p>'}</div></div>`;
+ fitWords(el);
 }
 
-/* ---------- 01 · One guess ---------- */
-let nwPrompt = 0;
-function renderNextWord(fresh = true) {
- chips($('#nw-prompts'), NEXT_WORD_PROMPTS.map(p => `${sentenceCase(p)} …`), nwPrompt, 'data-nw');
- const context = tokenize(NEXT_WORD_PROMPTS[nwPrompt]), prediction = predict(context), [first, second] = prediction.candidates;
- machine($('#nw-machine'), context, prediction, {pick: first.token, fresh});
- $('#nw-result').textContent = first.p > .95
-  ? `Almost certain: “${displayToken(first.token)}”. Some beginnings leave only one sensible next word.`
-  : `Not one answer but a chance for every word: “${displayToken(first.token)}” ${pct(first.p)}, “${displayToken(second.token)}” ${pct(second.p)}, and so on, adding up to 100%.`;
-}
-$('#nw-prompts').addEventListener('click', e => { const b = e.target.closest('[data-nw]'); if (!b) return; nwPrompt = +b.dataset.nw; renderNextWord(); $(`[data-nw="${nwPrompt}"]`).focus({preventScroll: true}); });
-
-/* ---------- 02 · The loop ---------- */
+/* ---------- 01 · Predict the next word, then repeat ---------- */
 // A new seed on every start, so 'surprise me' gives a different run each time you start over.
 const freshSeed = () => (Math.random() * 4294967296) >>> 0;
 const loop = {prompt: 0, context: [], start: 0, dice: false, seed: 7, roll: null, asked: 1, timer: null, playing: false};
@@ -126,7 +124,7 @@ $('#loop-reset').addEventListener('click', () => loopStart());
 $('#loop-machine').addEventListener('click', e => { const b = e.target.closest('[data-choose]'); if (!b || loop.playing) return; loopAdd(b.dataset.choose); });
 $$('[data-loop-pick]').forEach(b => b.addEventListener('click', () => { loop.dice = b.dataset.loopPick === 'dice'; loopStart(); }));
 
-/* ---------- 03 · Story completion ---------- */
+/* ---------- 02 · Use case: creative writing (story completion) ---------- */
 const story = {prompt: 0, context: [], start: 0, dice: false, seed: 3, timer: null, playing: false, untilEnd: false, last: null};
 const storyDone = () => story.context.at(-1) === END || !predict(story.context).candidates.length || story.context.length > 90;
 function renderStory(fresh = false) {
@@ -169,7 +167,7 @@ $('#story-all').addEventListener('click', () => storyWrite(true));
 $('#story-reset').addEventListener('click', () => storyStart());
 $$('[data-story-pick]').forEach(b => b.addEventListener('click', () => { story.dice = b.dataset.storyPick === 'dice'; storyStart(); }));
 
-/* ---------- 04 · Chat is a completion with a script ---------- */
+/* ---------- 02 · Use case: chat is a completion with a script ---------- */
 // Stages: 0 question typed · 1 script wrapped around it · 2 the box continues, word by word · 3 it chose "stop".
 const chat = {question: 0, stage: 0, reply: [], timer: null};
 function renderChat() {
@@ -206,11 +204,15 @@ $('#chat-replay').addEventListener('click', () => chatStart());
 
 document.addEventListener('visibilitychange', () => {
  if (document.hidden) { if (loop.playing) { loopStop(); renderLoop(); } if (story.playing) { storyStop(); renderStory(); } chatStop(); }
- else if (chat.stage < 3 && chat.timer === null && chatSeen) chatRun();
+ else if (chat.stage < 3 && chat.timer === null && chatShown) chatRun();
 });
 
-// The chat demo plays the first time it scrolls into view, so a first-time reader sees it happen.
-let chatSeen = false;
-renderNextWord(); loopStart(3); storyStart(0); renderChat();
-if ('IntersectionObserver' in window) new IntersectionObserver((entries, observer) => { if (entries.some(e => e.isIntersecting)) { chatSeen = true; observer.disconnect(); chatStart(); } }, {threshold: .35}).observe($('#chat-demo'));
-else { chatSeen = true; chatStart(); }
+// The use-case picker (src/use-cases-app.mjs) shows one panel at a time and announces which one.
+// The chat demo plays each time its panel is shown; a lab that is hidden stops writing.
+let chatShown = false;
+document.addEventListener('usecase:shown', e => {
+ chatShown = e.detail === 'chat';
+ if (story.playing && e.detail !== 'writing') { storyStop(); renderStory(); }
+ if (chatShown) chatStart(); else chatStop();
+});
+loopStart(3); storyStart(0); renderChat();

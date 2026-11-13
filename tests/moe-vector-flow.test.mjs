@@ -15,7 +15,7 @@ test('vector arrows originate at x, not router scores, and join weighted outputs
  const dense=moeVectorEdges(boxes,[0],{dense:true}).edges;assert.ok(!dense.some(e=>e.id==='x-router'));assert.equal(dense.filter(e=>e.kind==='dispatch').length,1);
 });
 test('overview and animation render vector strips, not raw hidden-value tables',async()=>{
- const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),app=await read('src/moe-app.mjs'),html=await read('moe.html');
+ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),app=await read('src/moe-app.mjs'),html=await read('moe-live.html');
  assert.doesNotMatch(app,/function hiddenStack|innerHTML=chips\(t\(\).mixed\)|innerHTML=chips\(moeMixPrefix/);
  assert.match(app,/numbers\('input'/);assert.match(app,/numbers\('combine'/);assert.match(app,/numbers\('output'/);assert.match(app,/moeVectorMarkup\(moeMixPrefix/);assert.match(html,/id="normalized-vector"/);assert.match(html,/id="moe-add-node"/);assert.match(html,/class="moe-flow-scroll"/);
 });

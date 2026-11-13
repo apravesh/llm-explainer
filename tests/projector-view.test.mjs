@@ -47,5 +47,5 @@ test('projector matrices adapt to patch count and do not depend on block selecti
  for(const patch of [16,24,32]){const {s,patches,result}=fixture(patch),html=projectorFlowMarkup(s,patches,result);assert.equal(projectorFlowMarkup({...s,layer:3},patches,result),html);assert.doesNotMatch(html,/NaN|undefined/);}
 });
 test('hosted source and offline build include the dimensions notice and renamed stage',async()=>{
- for(const name of ['vision.html','standalone.html']){const html=await readFile(new URL('../'+name,import.meta.url),'utf8');assert.match(html,/id="next-stage-title">Projector/);assert.match(html,/id="model-scale-note"/);assert.match(html,/1,024 features per patch/);assert.doesNotMatch(html,/What next\?/);}
+ for(const name of ['vision-live.html','standalone.html']){const html=await readFile(new URL('../'+name,import.meta.url),'utf8');assert.match(html,/id="next-stage-title">Projector/);assert.match(html,/id="model-scale-note"/);assert.match(html,/1,024 features per patch/);assert.doesNotMatch(html,/What next\?/);}
 });

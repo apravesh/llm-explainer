@@ -82,5 +82,5 @@ test('current collapsed overview no longer crops matrices or advertises linked s
  const read=n=>readFile(new URL('../'+n,import.meta.url),'utf8'),app=await read('src/full-app.mjs'),overview=await read('src/mlp-overview.mjs');
  assert.doesNotMatch(app,/mountSharedPatchWindow|updateOverviewWindow|setPatchWindow/);
  assert.doesNotMatch(overview,/followPatchWindow:true|data-full-matrix/);
- for(const file of ['vision.html','standalone.html']){const html=await read(file);assert.match(html,/id="attention-process-viz"/);assert.doesNotMatch(html,/class="ca-map"/);}
+ for(const file of ['vision-live.html','standalone.html']){const html=await read(file);assert.match(html,/id="attention-process-viz"/);assert.doesNotMatch(html,/class="ca-map"/);}
 });

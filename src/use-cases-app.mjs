@@ -8,7 +8,7 @@ const CLASS = {app: 'script', user: 'user', model: 'model', tool: 'tool'};
 const rawSegment = (who, text) => `<span class="${CLASS[who]}">${esc(text).replace(/\n/g, '<span class="nl">↵</span>\n')}</span>`;
 const caret = '<i class="caret" aria-hidden="true"></i>';
 
-/* ---------- 01 · Four uses, one kind of text ---------- */
+/* ---------- 02 · Use cases: two live labs (creative writing, chat) and two scripted illustrations ---------- */
 const use = {index: 0, seg: 0, units: 0, timer: null, started: false};
 const useCase = () => USE_CASES[use.index];
 const useDone = () => use.seg >= useCase().segments.length;
@@ -21,10 +21,6 @@ function revealed(i) {
 }
 function screen() {
  const c = useCase(), segs = c.segments, text = i => revealed(i), typing = i => i === use.seg && segs[i].who === 'model';
- if (c.key === 'chat') { const reply = text(3);
-  return `<div class="chat-window"><div class="bubble user"><small>YOU</small><p>${esc(segs[1].text)}</p></div><div class="bubble assistant ${reply === null ? 'waiting' : ''}"><small>ASSISTANT</small><p>${reply === null ? '<span class="typing"><i></i><i></i><i></i></span>' : esc(reply) + (typing(3) ? caret : '')}</p></div></div>`; }
- if (c.key === 'writing') { const more = text(1);
-  return `<div class="story-paper"><p class="story-text"><span class="given">${esc(segs[0].text)}</span>${more === null ? caret : `<span class="grown">${esc(more)}</span>${typing(1) ? caret : ''}`}</p></div>`; }
  if (c.key === 'code') { const more = text(1), accepted = useDone();
   const lines = (segs[0].text + (more ?? '')).split('\n'), given = segs[0].text.split('\n').length - 1;
   return `<div class="code-editor"><div class="code-tab">helpers.py</div><pre>${lines.map((line, n) => `<span class="ln">${n + 1}</span><span class="${n >= given && more !== null ? (accepted ? 'accepted' : 'ghost') : ''}">${esc(line) || ' '}</span>${n === lines.length - 1 && !accepted ? caret : ''}`).join('\n')}</pre><p class="code-hint">${more === null ? 'You stop typing…' : accepted ? 'Suggestion accepted.' : 'Grey text is the model’s suggestion.'}</p></div>`; }
@@ -39,11 +35,15 @@ function screen() {
 function renderUse() {
  const c = useCase();
  $('#use-tabs').innerHTML = USE_CASES.map((u, i) => `<button type="button" data-use="${i}" aria-pressed="${i === use.index}"><small>${u.kicker}</small>${u.label}</button>`).join('');
+ $('#use-label').textContent = c.note;
  $('#use-facts').innerHTML = `<div><small>YOU GIVE IT</small>${esc(c.give)}</div><div><small>IT WRITES</small>${esc(c.writes)}</div><div><small>WHERE YOU MEET IT</small>${esc(c.where)}</div>`;
+ // one panel at a time: a live lab (its id is c.lab) or the scripted two-view illustration
+ for (const panel of $$('#uses-lab .use-panel')) panel.hidden = panel.id !== (c.lab || 'use-scripted');
+ $('#use-point').textContent = c.point; $('#use-point').hidden = !c.point; $('#use-controls').hidden = !!c.lab;
+ if (c.lab) return;
  $('#use-screen').innerHTML = screen();
  $('#use-raw').innerHTML = c.segments.map((s, i) => { const t = revealed(i); return t === null ? '' : rawSegment(s.who, t); }).join('') + (useDone() ? '<span class="stop">stop</span>' : caret);
  $('#use-raw').scrollTop = $('#use-raw').scrollHeight;
- $('#use-point').textContent = c.point;
 }
 function useStop() { if (use.timer !== null) clearTimeout(use.timer); use.timer = null; }
 function useTick() {
@@ -56,11 +56,21 @@ function useTick() {
   renderUse(); useTick();
  }, delay);
 }
-function useStart(index = use.index) { useStop(); use.index = index; use.seg = 0; use.units = 0; use.started = true; renderUse(); useTick(); }
+function useStart(index = use.index) {
+ useStop(); use.index = index; use.seg = 0; use.units = 0; use.started = true; renderUse(); useTick();
+ document.dispatchEvent(new CustomEvent('usecase:shown', {detail: useCase().key}));   // the live labs listen for this
+}
+// Old links: #stories opens Creative writing and #chat opens Chat.
+function useFromHash() {
+ const index = USE_CASES.findIndex(u => u.lab && `#${u.lab}` === location.hash);
+ if (index < 0) return;
+ useStart(index); $('#uses-lab').scrollIntoView();
+}
+addEventListener('hashchange', useFromHash);
 $('#use-tabs').addEventListener('click', e => { const b = e.target.closest('[data-use]'); if (!b) return; useStart(+b.dataset.use); $(`[data-use="${use.index}"]`).focus({preventScroll: true}); });
 $('#use-replay').addEventListener('click', () => useStart());
 
-/* ---------- 02 · Chat with web search (a simple RAG setup) ---------- */
+/* ---------- 03 · Chat with web search (a simple RAG setup) ---------- */
 const STEPS = {
  on: [
   {key: 'ask', node: 'You ask', text: 'You ask about something that happened yesterday. The model was trained long before that.'},
@@ -129,5 +139,6 @@ document.addEventListener('visibilitychange', () => {
 renderUse(); renderSearch();
 // Each lab starts the first time it scrolls into view, so a first-time reader sees it happen.
 const onFirstView = (el, run) => { if (!('IntersectionObserver' in window)) { run(); return; } new IntersectionObserver((entries, o) => { if (entries.some(e => e.isIntersecting)) { o.disconnect(); run(); } }, {threshold: .3}).observe(el); };
-onFirstView($('#uses-lab'), () => useStart(0));
+useFromHash();
+onFirstView($('#uses-lab'), () => { if (!use.started) useStart(); });
 onFirstView($('#search-lab'), () => { search.started = true; search.playing = true; renderSearch(); searchTick(); });

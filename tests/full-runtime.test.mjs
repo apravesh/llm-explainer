@@ -58,7 +58,7 @@ test('head views expose all input dimensions and only their correct output slice
  const a=synthetic(2,1024),w=weightDescriptor(1024,1024,71),head=viewMatrix(a,{colStart:15*64,cols:64}),weights=viewMatrix(w,{colStart:15*64,cols:64});assert.deepEqual([weights.rows,weights.cols],[1024,64]);assert.equal(matrixValue(head,1,63),a.data[2047]);assert.equal(matrixValue(weights,1023,63),weightAt(w,1023,1023));
 });
 test('full-size UI and offline worker never call the reduced teaching engine',async()=>{
- const at=p=>new URL('../'+p,import.meta.url),html=await readFile(at('vision.html'),'utf8'),app=await readFile(at('src/full-app.mjs'),'utf8'),bundle=await readFile(at('standalone.html'),'utf8');assert.match(html,/src="src\/full-app.mjs"/);assert.doesNotMatch(app,/runEncoder\(/);assert.match(bundle,/full-worker-source/);assert.match(bundle,/WASM_KERNEL_BASE64/);assert.match(bundle,/width:1024,heads:16,headWidth:64,ffWidth:4096,depth:24,decoderWidth:5120/);assert.doesNotMatch(bundle,/DIM = 24/);
+ const at=p=>new URL('../'+p,import.meta.url),html=await readFile(at('vision-live.html'),'utf8'),app=await readFile(at('src/full-app.mjs'),'utf8'),bundle=await readFile(at('standalone.html'),'utf8');assert.match(html,/src="src\/full-app.mjs"/);assert.doesNotMatch(app,/runEncoder\(/);assert.match(bundle,/full-worker-source/);assert.match(bundle,/WASM_KERNEL_BASE64/);assert.match(bundle,/width:1024,heads:16,headWidth:64,ffWidth:4096,depth:24,decoderWidth:5120/);assert.doesNotMatch(bundle,/DIM = 24/);
 });
 
 test('extreme image aspect ratios retain at least one whole patch, never a zero-sized canvas',async()=>{

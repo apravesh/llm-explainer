@@ -9,7 +9,11 @@ Interactive chapters at `apravesh/llm-explainer`, deployed using GitHub Pages (`
 
 ## Vision: real dimensions, synthetic weights
 
-The vision chapter now **executes the full dimensions**, rather than relabeling small tensors. Pixtral is the default; ViT-B/16 remains selectable.
+**`vision.html` is now a plain page in the style of the Transformer page** (`src/vision-app.mjs`, `src/vision-engine.mjs`, `src/vision-data.mjs`, `vision.css`, on top of `transformer.css`). It follows an image through Pixtral's vision encoder: image → patches → embedding → block and head frames with attention → gated MLP → projector, with the same click-to-open steps and formula hovers, and it points out what changes from GPT-2 (patches instead of tokens, 2D RoPE instead of a position table, no attention mask, a gated MLP, a projector instead of next-token probabilities). Sizes are Pixtral's; the attention dots are illustrative, computed from each patch's colour and position, and labelled so on the page. It does not run a model. The 2D RoPE lab and the ViT vs Pixtral table are carried over unchanged.
+
+The earlier live-model page described below is kept, unlinked, as **`vision-live.html`**; `standalone.html` is still built from it.
+
+The live page **executes the full dimensions**, rather than relabeling small tensors. Pixtral is the default; ViT-B/16 remains selectable.
 
 | | Pixtral-12B vision path | ViT-B/16 |
 |---|---:|---:|
@@ -120,6 +124,8 @@ A separate deterministic 4 → 6 → 4 toy MLP lets readers switch between three
 
 The MoE chapter is a four-block, eight-feature teaching transformer, separate from the full-size vision engine. Each block has two four-feature causal attention heads, its own Q/K/V/Wₒ matrices, an independent 8 → 4 router and four 8 → 16 → 8 experts (GELU by default, optionally SwiGLU). Top-2 is the default; top-1 and a dense FFN comparison remain selectable. Only selected experts run. LayerNorm precedes attention and the FFN; each has its own residual addition. Seeded token vectors receive sinusoidal positions once, and final LayerNorm plus an 8 × 8 symbolic vocabulary head follows all blocks. This is not pretrained language-model inference.
 
+**Update (MoE page rebuilt in the Transformer/Vision style).** `moe.html` is now the Transformer page with its one difference called out: the same explorer (`#tx-flow`, block/head steppers, token tracing, zones that open in place, formula cards), with a MoE layer drawn where the MLP was: per token a router, a pool of 8 experts with the chosen top-2 lit, and a weighted sum. Clicking the layer stages it as Router scores → Top-2 → Softmax → Experts run → Weighted sum. Below it: a "What changes from the text transformer" table, sections 01 Router, 02 Top-k (with the token × expert "Who gets the work?" table), 03 Experts, 04 Stored vs used, 05 How an MoE learns (the existing `src/moe-training-app.mjs` lab), and a collapsed method note. Code: `src/moe-page-app.mjs`, `src/moe-page-engine.mjs`, `moe-page.css`, `tests/moe-page.test.mjs`. The engine reuses `moe-engine.mjs` / `moe-transformer.mjs` with 8 experts per block (width 8, 4 blocks, 2 heads, experts 8 → 16 → 8): router scores, top-2 choice, gate weights, attention scores and weight counts are real arithmetic of that untrained model; the next-token list is illustrative and labelled so; Mixtral 8x7B sizes are the published ones. The earlier page described in this section and below is kept, unlinked, as `moe-live.html` (with `moe.css`, `src/moe-app.mjs`); the older `tests/moe*.test.mjs` markup checks read that file.
+
 ## Run, test, build
 
 No runtime dependencies or API keys. Node.js 20+ for local tooling:
@@ -130,7 +136,7 @@ node --no-maglev --test tests/*.test.mjs
 node build.mjs
 ```
 
-The server binds only to loopback on port 4173 (`PORT` overrides it). `vision.html` loads `src/full-app.mjs`. `standalone.html` is the fully offline, double-clickable vision chapter, including sample SVGs, all scripts, the identical worker, and the SIMD kernel. `build.mjs` builds from the vision page, never the homepage. The `--no-maglev` test flag avoids a concurrent JIT/GC hang observed with the locally installed Node 23.7; it is not required in browsers.
+The server binds only to loopback on port 4173 (`PORT` overrides it). `vision.html` loads `src/vision-app.mjs`; `vision-live.html` loads `src/full-app.mjs`. `standalone.html` is the fully offline, double-clickable vision chapter, including sample SVGs, all scripts, the identical worker, and the SIMD kernel. `build.mjs` builds from the vision page, never the homepage. The `--no-maglev` test flag avoids a concurrent JIT/GC hang observed with the locally installed Node 23.7; it is not required in browsers.
 
 Tests include the independent reference-model numerical tests, SIMD kernels vs Float64 dot products, normalization/RoPE/attention, dense dependency ordering, cancellation, exact feature windows, bounded canvas summaries, offline syntax, and a **real 48-patch, 24-block, 1,024-wide Pixtral integration run including the 5,120-wide projector**.
 
@@ -233,11 +239,15 @@ To make the REINFORCE/GRPO difference visible, a banner above the lanes counts h
 
 ## Intro: How does an LLM actually work?
 
-`what-is-an-llm.html` is the first chapter, listed under a new **Intro** group on the home page and in every header. It treats the model as a black box and builds up in four steps: one next-word guess, the append-and-ask-again loop, story completion, and chat as a completion that starts with a `User: … / Assistant:` script. The box on the page is `src/intro-engine.mjs`: a longest-match lookup over about thirty hand-written example texts (three short stories, simple sentences, seven chat exchanges), with longer matches weighted 4^L. It is deliberately not a neural network, and the page says so. `src/intro-app.mjs` drives the animations; `intro.css` holds the styles.
+`what-is-an-llm.html` ("Overview") is the only Intro chapter, listed under the **Intro** group on the home page and in every header. It treats the model as a black box and has three sections:
 
-## Intro: What are LLMs used for?
+1. **The simplest form** (`#next-word`, with `#loop` kept for old links): given a stream of words, predict the next word, then add it to the text and ask again. One lab (`#loop-lab`) shows the guess and the append-and-ask-again loop.
+2. **Use cases** (`#uses`): a picker with four uses. *Creative writing* (default, `#stories`) is a live story-completion lab and *Chat* (`#chat`) is a live demo of chat as a completion that starts with a `User: … / Assistant:` script; both run on the page's toy box. *Code completion* and *Agentic workflow* are hand-written illustrations shown as two views: the screen a person sees, and the single text stream the model receives and continues, colour-coded by who wrote each part. Links to `#stories` and `#chat` select that use case.
+3. **Chat with web search** (`#search`): follows one question through a chatbot with web search, a minimal RAG setup: the model writes a search query, the app runs it, the results are pasted into the prompt above the question (`searchPrompt` in `src/use-cases-data.mjs`), and the model answers with sources. A switch replays the same question with search off. The town and websites are invented; nothing is live model output.
 
-`llm-use-cases.html` is the second Intro chapter. The first lab shows four popular uses (chatbot, creative writing, code completion, agentic workflow) as two views of the same thing: the screen a person sees, and the single text stream the model receives and continues, colour-coded by who wrote each part. The second lab follows one question through a chatbot with web search, a minimal RAG setup: the model writes a search query, the app runs it, the results are pasted into the prompt above the question (`searchPrompt` in `src/use-cases-data.mjs`), and the model answers with sources. A switch replays the same question with search off. All examples are hand-written illustrations with an invented town and websites; nothing is live model output.
+The box on the page is `src/intro-engine.mjs`: a longest-match lookup over about thirty hand-written example texts (three short stories, simple sentences, seven chat exchanges), with longer matches weighted 4^L. It is deliberately not a neural network, and the page says so. `src/intro-app.mjs` drives the animations; `intro.css` holds the styles.
+
+The page loads two modules that share it: `src/intro-app.mjs` (section 01 and the two live labs; styles in `intro.css`) and `src/use-cases-app.mjs` (the picker and the web-search lab; data in `src/use-cases-data.mjs`, styles in `use-cases.css`). The picker announces the selected use case with a `usecase:shown` event so the live labs can start and stop. `llm-use-cases.html` was merged into this page and is now only a redirect to `what-is-an-llm.html#uses`.
 
 ## Architecture: Text transformers (GPT-2)
 
@@ -246,9 +256,14 @@ To make the REINFORCE/GRPO difference visible, a banner above the lanes counts h
 - `src/text-data.mjs` (about 190 KB) holds values that project recorded from GPT-2 (small) for its five example sentences: tokens and IDs, the 50 highest next-token logits, and the raw attention scores (query·key) for all 12 blocks × 12 heads.
 - `src/text-engine.mjs` computes the rest from those recordings: scale by √64, causal mask, softmax, temperature, top-k, top-p and sampling. `tests/text.test.mjs` checks it against the numbers the original page shows.
 - The 01 Embedding section (text and `assets/transformer-explainer/embedding.png`) is copied from the original article as it is, with credit on the page.
+- `topAt` in the same file holds the 20 highest next-token logits after each earlier token of a prompt. These were recorded by running the GPT-2 (small) weights that Transformer Explainer ships on every prefix; the last position reproduces that project's own numbers. `nextAt` holds, from the same run, the logit, probability and rank GPT-2 gave to the token that really follows. Hovering a token in the diagram shows both.
 - Embedding and MLP vectors were not recorded. They are drawn from a seeded generator and labelled illustrative on the page.
 - Because there is no model, the sentence is fixed to the five examples; Generate redraws only the final sampling step. The page links to the original for typing your own text.
 
 ## Reference: Glossary & resources
 
 `glossary.html` gives short, plain definitions of common LLM terms in five groups (basics, inside the model, training, using models, hardware), each linked to the chapter that shows it where one exists, followed by a short list of outside resources. The terms come from course notes plus a few other common ones. The page is static HTML; `src/glossary-app.mjs` only adds the filter box. `tests/glossary.test.mjs` checks the term list, that every chapter link and anchor resolves, and a few definitions that are easy to get wrong.
+
+## Tokens page
+
+`tokenization.html` (Intro, after Overview) explains why models read tokens rather than words. `src/tokenizer-gpt2.mjs` is GPT-2's real byte-level BPE tokenizer in plain JavaScript; it needs only the 50,000 merge rules in `assets/gpt2-merges.txt` (from OpenAI's GPT-2 release, modified MIT licence), because a token's ID follows from them: 0–255 are the bytes, 256 + n is the token made by rule n, 50256 is end-of-text. `tests/tokenization.test.mjs` checks it against the token IDs recorded on the Transformer page and against reference IDs. `src/tokens-app.mjs` drives the live tokenizer, the "three ways to cut the same text" view and the step-by-step merge lab. The page fetches the rules file, so it needs a web server (GitHub Pages or `node server.mjs`), not `file://`.

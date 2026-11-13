@@ -9,7 +9,7 @@ function fixture(model='pixtral'){
  const c=FULL_CONFIGS[model];return {config:c,layers:[],pixels:matrix(48,768),projectionWeights:projectionWeights(c,768),embeddings:matrix(48,c.width)};
 }
 test('the extra projection button is removed in both served and offline pages',async()=>{
- for(const file of ['vision.html','standalone.html']){
+ for(const file of ['vision-live.html','standalone.html']){
   const html=await read(file);assert.doesNotMatch(html,/patch-projection-arrow|--projection-gap/);
  }
  const bundle=await read('standalone.html');assert.match(bundle,/function patchProjectionLinksMarkup/);assert.match(bundle,/data-patch-projection/);

@@ -6,7 +6,7 @@ test('attention projection is a non-expanding labeled arrow retaining WO and res
  assert.match(html,/class="projection-arrow"/);assert.match(html,/× Wₒ/);assert.match(html,/\+ H/);assert.match(html,/Not vocabulary logits/);assert.match(html,/8 by 8/);assert.doesNotMatch(html,/<button|mv-vector|<details/);
 });
 test('laptop layout replaces the wide projection track and uses a clean dotted block',async()=>{
- const css=await read('moe.css'),html=await read('moe.html');
+ const css=await read('moe.css'),html=await read('moe-live.html');
  assert.match(css,/border:1px dotted #a8bacf/);assert.match(css,/110px 54px 84px 126px minmax\(162px,1fr\) 166px 86px;gap:18px;min-width:896px/);
  assert.match(css,/@media\(min-width:941px\) and \(max-width:1199px\)/);
  const section=html.slice(html.indexOf('class="context-stage context-projection"'),html.indexOf('<svg id="moe-wires"'));

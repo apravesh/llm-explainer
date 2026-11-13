@@ -31,7 +31,7 @@ test('initially hidden and detached views are safe; disposal invalidates stale c
  const detached=harness();detached.root.isConnected=false;detached.advance(0);assert.equal(detached.frames.size,0);assert.ok(detached.observer.disconnected);
 });
 test('page has no stop/replay control; rerenders restart the current trace and resize only adjusts wires',async()=>{
- const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),app=await read('src/moe-app.mjs'),html=await read('moe.html');
+ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),app=await read('src/moe-app.mjs'),html=await read('moe-live.html');
  assert.doesNotMatch(app+html,/moe-animate|Stop animation|Animate this token|Stop animation|Replay/);
  assert.match(app,/drawWires\(\);startAutomaticAnimation\(\)/);assert.match(app,/new ResizeObserver\(drawWires\)/);assert.match(app,/addEventListener\('close',\(\)=>animationController\?\.sync\(\)\)/);
  assert.match(html,/id="flow-progress" class="flow-progress" aria-live="off"/);assert.match(app,/moeVectorMarkup\(moeMixPrefix\(trace,count\)/);

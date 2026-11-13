@@ -71,7 +71,7 @@ test('long frame gaps cannot skip unseen stages',()=>{
  const h=clockHarness();h.clock.start();h.advance();h.advance(100000);assert.equal(h.clock.snapshot.step,1);assert.equal(h.clock.snapshot.elapsed,0);assert.deepEqual(h.steps.map(s=>s.step),[0,1]);
 });
 test('the reference tour is not included in the active app or offline bundle',async()=>{
- for(const name of ['vision.html','src/full-app.mjs','standalone.html']){
+ for(const name of ['vision-live.html','src/full-app.mjs','standalone.html']){
   const source=await readFile(new URL('../'+name,import.meta.url),'utf8');
   assert.doesNotMatch(source,/function startTour|function stopTour|tourFrame|tourBar|id="tour"|data-tour-|Play the animated walkthrough|Follow a patch/);
  }

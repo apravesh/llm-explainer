@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
-for(const file of ['vision.html','src/full-app.mjs','standalone.html'])test(`${file}: removed walkthrough and manual backend toggle do not leave controls or handlers`,async()=>{
+for(const file of ['vision-live.html','src/full-app.mjs','standalone.html'])test(`${file}: removed walkthrough and manual backend toggle do not leave controls or handlers`,async()=>{
  const source=await read(file);
  assert.doesNotMatch(source,/id="tour"|data-tour-|startTour\(|stopTour\(|tourFrame|tourRenderer|tourBar|Follow a patch|data-compute-mode|Recompute on CPU|Use automatic backend/);
 });

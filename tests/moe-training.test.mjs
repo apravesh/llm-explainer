@@ -23,6 +23,6 @@ test('without balancing E3 is never discovered; with balancing it is and the los
  assert.ok(forward(b,'top2').selected.includes(2));assert.ok(forward(b,'top2').loss<.02);
 });
 test('training experts moves only the selected ones',()=>{const {state}=trainStep(cloneTrainingState(),'top2',{trainExperts:true});assert.notDeepEqual(state.experts[0],INITIAL_TRAINING_STATE.experts[0]);assert.deepEqual(state.experts[2],INITIAL_TRAINING_STATE.experts[2]);assert.deepEqual(state.experts[3],INITIAL_TRAINING_STATE.experts[3]);});
-test('moe page includes the training section and its module',async()=>{const html=await read('moe.html');
+test('moe page includes the training section and its module',async()=>{const html=await read('moe-live.html');
  for(const id of ['moe-training','train-compare','tl-plane','tl-bars','tl-stepbtn','tl-balance'])assert.match(html,new RegExp(`id="${id}"`));
  assert.match(html,/src="src\/moe-training-app.mjs"/);assert.ok(html.indexOf('id="moe-training"')<html.indexOf('class="variants reading"'));assert.match(html,/router z-loss/);});
