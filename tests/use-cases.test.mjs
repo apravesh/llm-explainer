@@ -23,3 +23,10 @@ test('use-cases page is second in Intro, linked from every header, and its asset
  for(const page of ['index.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','what-is-an-llm.html','standalone.html'])assert.match(await read(page),/<a href="llm-use-cases.html">Use cases<\/a>/);
  assert.match(html,/<a href="llm-use-cases.html" aria-current="page">Use cases<\/a>/);
 });
+test('the three points after the search demo are plain text, not numbered cards',async()=>{
+ const html=await (await import('node:fs/promises')).readFile(new URL('../llm-use-cases.html',import.meta.url),'utf8');
+ assert.doesNotMatch(html,/rag-cards|intro-cards/);
+ const block=html.slice(html.indexOf('<div class="plain-points">'),html.indexOf('<details class="further">',html.indexOf('<div class="plain-points">')));
+ for(const title of ['The model learned nothing new','The answer is only as good as the results','The same trick works on your own files'])assert.ok(block.includes(`<h3>${title}</h3>`),title);
+ assert.doesNotMatch(block,/<span>0\d<\/span>/);
+});

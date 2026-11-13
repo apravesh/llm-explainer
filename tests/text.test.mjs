@@ -68,6 +68,48 @@ test('attention and MLP sections explain each step around their diagrams',async(
  // 2·768·3072 + 3072 + 768 weights and biases in the MLP; 4·768² + 4·768 in attention
  assert.equal(2*768*3072+3072+768,4722432);assert.equal(4*768*768+4*768,2362368);
 });
+test('attention grids play as steps: multiply, scale, mask, then softmax row by row',async()=>{
+ const app=await read('src/text-app.mjs'),css=await read('transformer.css'),html=await read('transformer.html');
+ assert.match(html,/id="attn-play"/);for(const f of ['Q · K<sup>T</sup></span>','÷ √d<sub>k</sub>','e<sup>x</sup> ÷ Σ e<sup>x</sup>'])assert.ok(app.includes(f),f);assert.match(app,/const ATTN_STEPS=\[/);
+ const steps=[...app.slice(app.indexOf('const ATTN_STEPS'),app.indexOf('function playAttention')).matchAll(/\[(\d+),(\d),'(show|mask)'/g)].map(m=>[+m[1],+m[2],m[3]]);
+ assert.deepEqual(steps.map(s=>s.slice(1)),[[1,'show'],[2,'show'],[2,'mask'],[3,'show']]);
+ for(let i=1;i<steps.length;i++)assert.ok(steps[i][0]-steps[i-1][0]>=1200,'each step has time to be read');
+ assert.match(app,/class="was">\$\{scaled\[i\]\[j\]\.toFixed\(2\)\}<\/b><b class="now">−∞/,'future cells show their score before the mask');
+ assert.match(app,/prefers-reduced-motion/);assert.match(app,/IntersectionObserver/);assert.match(app,/if\(c&&!attnBusy\)attnResult/);
+ assert.match(css,/\.attn-stage\.mask \.c\.masked \.was\{display:none\}/);assert.match(css,/transition-delay:calc\(var\(--i\)\*26ms\)/);
+});
+test('attention expands in place into three stages, each with a formula on hover',async()=>{
+ const app=await read('src/text-app.mjs'),css=await read('transformer.css'),html=await read('transformer.html');
+ assert.match(app,/const STAGE_NAMES=\['Dot product','Scaling · Mask','Softmax · Dropout'\]/);
+ assert.match(app,/data-expand="attention"/);assert.match(app,/function setExpand\(which\)/);
+ assert.match(app,/if\(state\.expand\)return;\n  const el=e\.target\.closest\('\[data-t\]'\)/,'no row tracing while the stages are open');assert.match(app,/cell\.classList\.add\('hot'\)/);
+ assert.doesNotMatch(app,/ATTENTION ⊕|CLOSE ×/,'no open/close buttons: the head itself is the target');
+ assert.match(app,/if\(!state\.expand&&zone\)\{setExpand\(zone\);return;\}/);assert.match(app,/if\(state\.expand&&zone!==state\.expand&&!e\.target\.closest\('\.chip'\)\)\{setExpand\(null\);return;\}/);
+ // opening timeline: lines draw, dots pop one by one, each later stage starts as the previous picture and turns into its own
+ assert.match(app,/T1=t0\+QK\/n\+QK\+500,T2=T1\+500\+1000\+150,T3=T2\+450\+1000/);
+ assert.match(app,/pathLength="1" class="draw"/);assert.match(app,/ pop" style="--at:/);assert.match(app,/look\(m-1,i,j\),b=look\(m,i,j\)/);
+ assert.match(app,/class="fv\$\{opening\?' late':''\}"[^`]*H\$\{outX-74\}/,'Values stay connected to Out when the stages are open');
+ for(const k of ['tx-draw','tx-pop','tx-turn','tx-grow'])assert.match(css,new RegExp(`@keyframes ${k}`));
+ assert.match(css,/\.cell\.turn\{animation:tx-turn 1s ease-in-out backwards/,'colour changes slowly and then hands back to the live values');assert.match(app,/e\.key==='Escape'&&state\.expand/);
+ const formulas=app.slice(app.indexOf('const FORMULAS=['),app.indexOf('function flow(){'));
+ for(const part of ['Q<sub>i</sub> · K<sub>j</sub>','÷ √64','−∞','exp(scaled<sub>i,j</sub>)','Dropout randomly zeroes','weight<sub>i,j</sub> × V<sub>j</sub>','W<sub>2</sub> · GELU(W<sub>1</sub> · x + b<sub>1</sub>) + b<sub>2</sub>','logits = W<sub>out</sub> · h<sub>last</sub>','logit<sub>i</sub> ÷ T','keep the k highest scores','p<sub>i</sub> ≥ p'])assert.ok(formulas.includes(part),part);
+ assert.match(app,/class="stage-name" data-formula="\$\{m\}"/);assert.match(app,/class="stage-name out-name" data-formula="3"/);assert.match(app,/class="stage-name mlp-name" data-formula="4"/);assert.match(app,/class="stage-name fan-hit" data-formula="5"/);for(const k of [6,7,8])assert.match(app,new RegExp(`has-formula\\\\?" data-formula=\\\\?"${k}`));assert.match(app,/closest\?\.\('\.tx-controls \.has-formula'\)/);assert.match(app,/formula\.innerHTML=FORMULAS\[\+name\.dataset\.formula\]/);
+ assert.match(html,/id="tx-formula" role="tooltip" hidden/);assert.match(html,/id="tx-tip" hidden/);
+ assert.match(css,/@keyframes tx-grow/);assert.match(css,/#tx-flow \.xdim\{opacity:\.12/);
+});
+test('output section explains logits, temperature and the two filters around its table',async()=>{
+ const html=await read('transformer.html'),out=html.slice(html.indexOf('<section id="output"'),html.indexOf('</section>',html.indexOf('<section id="output"')));
+ assert.match(out,/<h2>Output probabilities<\/h2>/);
+ for(const part of ['From vector to logits to probabilities','50,257','<code>logits</code>','<h3>Temperature</h3>','Temperature = 1.','Temperature below 1.','Temperature above 1.','<h3>Top-k and top-p</h3>','id="prob-table"','id="prob-card"','data-controls'])assert.ok(out.includes(part),part);
+});
+test('embedding and probabilities also open in place, one part at a time',async()=>{
+ const app=await read('src/text-app.mjs'),css=await read('transformer.css');
+ for(const zone of ['embedding','attention','probabilities'])assert.match(app,new RegExp(`data-zone="${zone}"`));
+ assert.match(app,/const X=state\.expand,E=X==='attention',EE=X==='embedding',EP=X==='probabilities'/);
+ for(const part of ['Tokenization','Token embedding','Positional encoding','÷ temperature','Softmax','W<sub>E</sub>[ id<sub>i</sub> ] + W<sub>P</sub>[ i ]','exp(s<sub>i</sub>)'])assert.ok(app.includes(part),part);
+ assert.match(app,/class="pl"[^`]*r\.logit\.toFixed\(2\)/);assert.match(app,/ps\.textContent=r\.scaled\.toFixed\(2\);g\.querySelector\('\.pk'\)\.textContent=r\.kept\?r\.scaled\.toFixed\(2\):'−∞'/);
+ assert.match(app,/row&&state\.expand==='probabilities'/);assert.match(css,/#tx-flow:not\(\.expanded\) \[data-zone\]\{cursor:zoom-in\}/);
+});
 test('temperature, sampling and Generate repaint only the probabilities',async()=>{
  const app=await read('src/text-app.mjs');
  assert.match(app,/tx-generate'\)\.addEventListener\('click',\(\)=>\{state\.rnd=Math\.random\(\);refreshProbs\(\);\}\)/);
@@ -83,8 +125,8 @@ test('explorer is full width, and a block or head change redraws only that part'
  const app=await read('src/text-app.mjs'),css=await read('transformer.css');
  assert.match(css,/\.lesson-section>\.tx-lab\{margin-inline:calc\(50% - 50vw\)/);
  assert.match(app,/function swap\(kind,dir\)/);assert.match(app,/swap\(kind,dir\);return;/);
- assert.doesNotMatch(app.slice(app.indexOf('function swap(kind,dir)'),app.indexOf('/* ---------- wiring')),/render\(|flow\(\)/,'swap must not rebuild the diagram');
- assert.match(css,/\.swap\.head-part\{animation:tx-head-in/);assert.match(css,/#tx-flow \.frame\{[^}]*stroke-dasharray/);assert.match(app,/chip\('block',/);assert.match(app,/chip\('head',/);assert.doesNotMatch(await read('transformer.html'),/id="tx-lab">[\s\S]*?class="tx-steppers"[\s\S]*?id="tx-result"/);assert.match(css,/#tx-flow \.cell\{transition:fill-opacity/);
+ assert.doesNotMatch(app.slice(app.indexOf('function swap(kind,dir)'),app.indexOf('// Open or close the three stages')),/render\(|flow\(\)/,'swap must not rebuild the diagram');
+ assert.match(css,/\.swap\.head-part\{animation:tx-head-in/);assert.match(css,/tx-head-in \.95s/);assert.match(css,/@keyframes tx-block-in\{0%\{transform:scaleX\(0\)/);assert.match(css,/@keyframes tx-block-out\{[^}]*\}[^}]*\}100%\{transform:scaleX\(0\)/);assert.match(css,/\[data-dir=next\] \.ghost\{transform-origin:var\(--oxL\)/);assert.match(css,/\[data-dir=next\] \.swap:is\(\.head-part,\.block-part\)\{transform-origin:var\(--oxR\)/);assert.match(css,/#tx-flow \.frame\{[^}]*stroke-dasharray/);assert.match(app,/chip\('block',/);assert.match(app,/chip\('head',/);assert.doesNotMatch(await read('transformer.html'),/id="tx-lab">[\s\S]*?class="tx-steppers"[\s\S]*?id="tx-result"/);assert.match(css,/#tx-flow \.cell\{transition:fill-opacity/);
 });
 test('every page header and the home page link to the text chapter',async()=>{
  for(const page of ['index.html','what-is-an-llm.html','llm-use-cases.html','vision.html','moe.html','analytics.html','pretraining.html','post-training-instruct.html','post-training-rl.html','transformer.html'])

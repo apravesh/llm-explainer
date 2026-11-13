@@ -51,3 +51,4 @@ body h3{font-weight:500;color:#6582a6}
 .intro .page-links,.training-intro .page-links,.journal-intro .page-links,.moe-intro .page-links{margin:16px 0 0;min-height:26px;line-height:1.6;font-size:12px}
 @media(max-width:940px){.intro,.training-intro,.journal-intro{padding-top:35px}}
 @media(max-width:650px){.intro,.training-intro,.journal-intro{padding:30px 0 25px}}
+@media(min-width:901px) and (max-width:1480px){.site-bar{gap:14px 18px}.site-bar nav{gap:13px}.site-bar .nav-group{padding-left:13px;letter-spacing:1px}}

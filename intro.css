@@ -52,7 +52,8 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 .grown-text .grown,.story-text .grown{color:#3667e4}
 .grown-text .new,.story-text .new{background:#eaf0ff;border-radius:4px;animation:word-pop .45s both;display:inline-block}
 .loop-back{position:relative;height:30px;margin:2px 12% 0 14%;border:1.5px dashed #c9d4e6;border-top:0;border-radius:0 0 14px 14px}
-.loop-back::before{content:'';position:absolute;left:-6.5px;top:-3px;border:6px solid transparent;border-bottom-color:#c9d4e6;border-top-width:0}
+.loop-back::before{content:'';position:absolute;left:-6.5px;top:calc(-3px - var(--rise,0px));border:6px solid transparent;border-bottom-color:#c9d4e6;border-top-width:0}
+.loop-back::after{content:'';position:absolute;left:-1.5px;bottom:100%;height:var(--rise,0px);border-left:1.5px dashed #c9d4e6}
 .loop-back span{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);background:#fff;padding:0 10px;font-size:11px;color:#7c8ca3;white-space:nowrap;max-width:96%;overflow:hidden;text-overflow:ellipsis}
 #loop-lab.done .loop-back{display:none}
 #loop-lab .lab-result{margin-top:26px}
@@ -105,3 +106,16 @@ button.mc-row{cursor:pointer}button.mc-row:hover{background:#f4f7fc;border-color
 .takeaways-intro .further{margin-top:22px}
 .section-heading h2 em .token-aside{font:400 .55em var(--mono);font-style:normal;letter-spacing:0;color:#8a9bb1;vertical-align:.15em;margin-left:.1em;white-space:nowrap}
 .notes-section{padding:20px 0 34px}.lesson-section.notes-section>.further{margin-top:0;border-top:0;padding-top:0}
+/* repeat lab, one word added: only the changed parts move */
+.machine.step .mc-word.new{position:relative;z-index:2}
+.mc-word.flying{box-shadow:0 6px 16px #1e324533}
+.machine.step .mc-arrow:not(.out) i{animation:mc-dot .45s linear .95s forwards}
+.machine.step .mc-box{animation:box-think .7s ease 1.3s both}
+.machine.step .mc-box::after{animation:box-shine .7s ease 1.3s both}
+.machine.step .mc-arrow.out i{animation:mc-dot .4s linear 1.85s forwards}
+.machine.step .mc-row{animation:row-in .35s both;animation-delay:calc(2.15s + var(--d))}
+.machine.step .mc-track i{animation:bar-grow .5s both;animation-delay:calc(2.2s + var(--d));transform-origin:left}
+.mc-out{position:relative}
+.mc-bars-old{position:absolute;left:0;right:0;pointer-events:none;background:#fff}
+.mc-bars-old .mc-row{animation:none!important;opacity:1}
+.mc-bars-old .mc-track i{animation:none!important}

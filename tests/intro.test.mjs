@@ -33,3 +33,16 @@ test('random stories vary: many different stories per opening, and a new seed on
  const app=await (await import('node:fs/promises')).readFile(new URL('../src/intro-app.mjs',import.meta.url),'utf8');
  assert.match(app,/story\.seed = freshSeed\(\)/);assert.doesNotMatch(app,/story\.seed = 3;/);
 });
+test('the repeat lab points its return arrow at the end of the text, where the new word goes',async()=>{
+ const fs=await import('node:fs/promises'),app=await fs.readFile(new URL('../src/intro-app.mjs',import.meta.url),'utf8'),css=await fs.readFile(new URL('../intro.css',import.meta.url),'utf8');
+ assert.match(app,/function placeLoopBack\(\)/);assert.match(app,/word\.right \+ 7 - start\.left/);assert.match(app,/\n placeLoopBack\(\);\n\}/);
+ assert.match(css,/\.loop-back::after\{[^}]*height:var\(--rise/);
+});
+test('adding a word in the repeat lab moves only what changed',async()=>{
+ const fs=await import('node:fs/promises'),app=await fs.readFile(new URL('../src/intro-app.mjs',import.meta.url),'utf8'),css=await fs.readFile(new URL('../intro.css',import.meta.url),'utf8');
+ assert.match(app,/renderLoop\(true, loop\.context\.length - 1, true\)/);assert.match(app,/function loopMotion\(box, before, from, oldBars, held\)/);
+ assert.match(app,/el\.classList\.toggle\('fresh', fresh && !step && !reduced\.matches\)/,'no full replay when one word is added');
+ assert.match(app,/data-i="\$\{hidden \+ i\}"/);assert.match(app,/word\.animate\(frames/);assert.match(app,/if \(!reduced\.matches && !loopDone\(\)\) loopMotion/);
+ assert.doesNotMatch(css,/\.machine\.step \.mc-word\{animation/,'earlier words are not re-animated');
+ for(const part of ['.machine.step .mc-arrow:not(.out) i','.machine.step .mc-box','.machine.step .mc-arrow.out i','.machine.step .mc-row'])assert.ok(css.includes(part),part);
+});

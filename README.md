@@ -248,3 +248,7 @@ To make the REINFORCE/GRPO difference visible, a banner above the lanes counts h
 - The 01 Embedding section (text and `assets/transformer-explainer/embedding.png`) is copied from the original article as it is, with credit on the page.
 - Embedding and MLP vectors were not recorded. They are drawn from a seeded generator and labelled illustrative on the page.
 - Because there is no model, the sentence is fixed to the five examples; Generate redraws only the final sampling step. The page links to the original for typing your own text.
+
+## Reference: Glossary & resources
+
+`glossary.html` gives short, plain definitions of common LLM terms in five groups (basics, inside the model, training, using models, hardware), each linked to the chapter that shows it where one exists, followed by a short list of outside resources. The terms come from course notes plus a few other common ones. The page is static HTML; `src/glossary-app.mjs` only adds the filter box. `tests/glossary.test.mjs` checks the term list, that every chapter link and anchor resolves, and a few definitions that are easy to get wrong.

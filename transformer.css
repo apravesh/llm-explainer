@@ -33,7 +33,7 @@
 #tx-flow .q{fill:#4f7be8}#tx-flow .k{fill:#c7765b}#tx-flow .v{fill:#458976}#tx-flow .o{fill:#7f58a3}
 #tx-flow .lbl-q{fill:#4f7be8;font-size:12px}#tx-flow .lbl-k{fill:#c7765b;font-size:12px}#tx-flow .lbl-v{fill:#458976;font-size:12px}#tx-flow .lbl-o{fill:#7f58a3;font-size:12px}
 #tx-flow path{fill:none}
-#tx-flow .fq{stroke:#7a9bec}#tx-flow .fk{stroke:#d79278}#tx-flow .fv{stroke:#68ab98}#tx-flow .fo{stroke:#b59ccd}#tx-flow .fg{stroke:#cdd6e2}
+#tx-flow .fq,#tx-flow .fq path{stroke:#7a9bec}#tx-flow .fk,#tx-flow .fk path{stroke:#d79278}#tx-flow .fv{stroke:#68ab98}#tx-flow .fo{stroke:#b59ccd}#tx-flow .fg{stroke:#cdd6e2}
 #tx-flow .band{stroke:none;opacity:.5}
 #tx-flow .card{fill:#fff;stroke:#e2e8f0}
 #tx-flow .card.back{fill:#fbfcfe}
@@ -124,17 +124,17 @@
 #tx-flow .step:focus{outline:none}
 #tx-flow .step:active rect{fill:#d3e0fa}
 /* block / head change: only that part moves. The old one leaves as a ghost, the new one arrives from the side it was asked for. */
-#tx-flow .cell{transition:fill-opacity .45s ease}
+#tx-flow .cell{transition:fill-opacity .9s ease}
 #tx-flow .ghost{pointer-events:none}
-#tx-lab #tx-flow[data-swap=block] .swap:is(.head-part,.block-part){animation:tx-block-in .5s cubic-bezier(.2,.7,.2,1) both}
-#tx-lab #tx-flow[data-swap=block] .ghost{animation:tx-block-out .32s ease-in both}
-#tx-lab #tx-flow[data-swap=head] .swap.head-part{animation:tx-head-in .46s cubic-bezier(.2,.7,.2,1) both}
-#tx-lab #tx-flow[data-swap=head] .ghost{animation:tx-head-out .3s ease-in both}
-#tx-lab #tx-flow .chip-label.swap{animation:tx-label .4s ease both}
-#tx-lab #tx-flow .frame.swap{animation:tx-frame .7s ease both}
-#tx-lab #tx-flow .card.front.swap{animation:tx-frame-head .7s ease both}
-@keyframes tx-block-in{from{opacity:0;transform:translateX(calc(var(--dir)*34px))}to{opacity:1;transform:none}}
-@keyframes tx-block-out{from{opacity:1;transform:none}to{opacity:0;transform:translateX(calc(var(--dir)*-34px))}}
+#tx-lab #tx-flow[data-swap=block] .swap:is(.head-part,.block-part){animation:tx-block-in .85s cubic-bezier(.45,0,.2,1) both}
+#tx-lab #tx-flow[data-swap=block] .ghost{animation:tx-block-out .85s cubic-bezier(.45,0,.2,1) both}
+#tx-lab #tx-flow[data-swap=head] .swap.head-part{animation:tx-head-in .95s cubic-bezier(.2,.7,.2,1) both}
+#tx-lab #tx-flow[data-swap=head] .ghost{animation:tx-head-out .65s ease-in both}
+#tx-lab #tx-flow .chip-label.swap{animation:tx-label .7s ease both}
+#tx-lab #tx-flow .frame.swap{animation:tx-frame 1.2s ease both}
+#tx-lab #tx-flow .card.front.swap{animation:tx-frame-head 1.2s ease both}
+@keyframes tx-block-in{0%{transform:scaleX(0);opacity:0}25%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes tx-block-out{0%{transform:none;opacity:1}75%{opacity:1}100%{transform:scaleX(0);opacity:0}}
 @keyframes tx-head-in{from{opacity:0;transform:translate(calc(var(--dir)*14px),calc(var(--dir)*14px))}to{opacity:1;transform:none}}
 @keyframes tx-head-out{from{opacity:1;transform:none}to{opacity:0;transform:translate(calc(var(--dir)*-14px),calc(var(--dir)*-14px))}}
 @keyframes tx-label{from{opacity:0;transform:translateY(calc(var(--dir)*5px))}to{opacity:1;transform:none}}
@@ -153,7 +153,7 @@
 .tx-article>p,.tx-article>h3,.tx-article>figure{max-width:780px}
 .tx-article>p:not(.vec-note){font-size:14px;line-height:1.85;color:#5b6b80;margin:0 0 14px}
 .tx-article>h3{font-size:16px;font-weight:500;color:#293647;margin:24px 0 8px}
-.tx-article code{font:12px var(--mono);background:#eef1f6;color:#3f4f63;border-radius:4px;padding:1px 5px}
+.tx-article>p code,.tx-article>ul code{font:12px var(--mono);background:#eef1f6;color:#3f4f63;border-radius:4px;padding:1px 5px}
 .tx-article figure{margin:20px 0 22px}
 .tx-article figure img{display:block;width:min(100%,520px);height:auto;margin:0 auto;border:1px solid var(--line);border-radius:9px;background:#fff}
 .tx-article figcaption{font-size:12px;line-height:1.7;color:#8a9bb1;margin-top:10px;text-align:center}
@@ -177,3 +177,125 @@
 .qkv-bar.k{--c:#e6b29f;--d:#c7765b}.qkv-bar.v{--c:#94c8b8;--d:#458976}
 .qkv-rows .vec-note{margin:2px 0 0}
 @media(max-width:600px){.qkv-lab{gap:14px}.qkv-rows>div{grid-template-columns:70px minmax(0,1fr) 44px;gap:8px}}
+/* attention grids: revealed step by step */
+.attn-play{margin-left:auto;background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:6px 14px;font-size:12px;color:#3667e4}
+.attn-play:hover{background:#f1f5fc}
+.attn-stage{opacity:.32;transition:opacity .3s}
+.attn-stage.show{opacity:1}
+.mat .c{background:var(--bg,#f4f6fb);opacity:0;transform:scale(.55)}
+.attn-stage.show .c{opacity:1;transform:none;transition:opacity .28s ease,transform .28s ease,background .3s ease,color .3s ease;transition-delay:calc(var(--i)*26ms)}
+.mat .c.masked{background:var(--bg,#f4f6fb);border:1px dashed transparent;color:#3f4f63}
+.mat .c.masked .now{display:none;font-weight:400}.mat .c.masked .was{font-weight:400}
+.attn-stage.mask .c.masked,.mat .c.masked.done{background:#fff;border-color:#e2e8f0;color:#b6c2d2}
+.attn-stage.mask .c.masked .was{display:none}.attn-stage.mask .c.masked .now{display:inline}
+.attn-stage.mask .c.masked{animation:attn-mask .45s ease both;animation-delay:calc(var(--i)*30ms)}
+@keyframes attn-mask{0%{transform:scale(1)}45%{transform:scale(.7);background:#f5f0fa}100%{transform:none}}
+.attn-stages.instant .c,.attn-stages.instant .attn-stage{transition:none!important;animation:none!important}
+.attn-stages.playing .c{cursor:progress}
+@media(prefers-reduced-motion:reduce){.mat .c,.attn-stage{transition:none!important;animation:none!important}}
+/* attention expanded in place into its three stages */
+.tx-stage{position:relative;min-width:980px}
+#tx-flow{min-width:0}
+#tx-flow .xdim{opacity:.12;pointer-events:none;transition:opacity .3s}
+#tx-flow.expanded{cursor:zoom-out}
+#tx-flow.expanded .head-part,#tx-flow.expanded .chip{cursor:default}
+#tx-flow .expander,#tx-flow .stage-name{cursor:pointer}
+#tx-flow .expander rect,#tx-flow .stage-name rect{fill:#fff;stroke:#d9e0ea}
+#tx-flow .expander text{font:9px var(--mono);letter-spacing:1px;fill:#7f58a3}
+#tx-flow .stage-name text{font-size:11px;fill:#5b6b80}
+#tx-flow .expander:hover rect,#tx-flow .expander:focus-visible rect,#tx-flow .stage-name:hover rect,#tx-flow .stage-name:focus-visible rect{fill:#f5f0fa;stroke:#b59ccd}
+#tx-flow .stage-name:hover text,#tx-flow .stage-name:focus-visible text{fill:#684686}
+#tx-flow .expander:focus,#tx-flow .stage-name:focus{outline:none}
+#tx-flow .leg{font:9px var(--mono);fill:#8a9bb1}
+#tx-flow .leg-bar{fill:url(#none);fill:#b59ccd;opacity:.55}
+#tx-flow .stage-arrow{font-size:15px;fill:#9aabc1}
+#tx-flow.expanded .cell{cursor:crosshair}
+#tx-lab #tx-flow .grow{animation:tx-grow .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--k)*90ms)}
+#tx-lab #tx-flow .slide{animation:tx-slide .5s cubic-bezier(.2,.7,.2,1) both}
+#tx-lab #tx-flow .widen{transform-box:fill-box;transform-origin:left center;animation:tx-widen .5s cubic-bezier(.2,.7,.2,1) both}
+@keyframes tx-grow{from{opacity:0;transform:translateX(var(--from))}to{opacity:1;transform:none}}
+@keyframes tx-slide{from{transform:translateX(var(--from))}to{transform:none}}
+@keyframes tx-widen{from{transform:scaleX(var(--sx))}to{transform:none}}
+.tx-tip{position:fixed;z-index:30;pointer-events:none;background:#293647;color:#fff;font-size:11px;line-height:1.5;padding:6px 9px;border-radius:5px;white-space:nowrap}
+.tx-tip b{display:block;font-weight:600}
+.tx-formula{position:fixed;z-index:30;pointer-events:none;width:340px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 28px #1e324524;padding:12px 14px}
+.tx-formula h4{font-size:12px;font-weight:600;color:#293647;margin:0 0 8px}
+.tx-formula .fx{font:13px/1.9 Georgia,"Times New Roman",serif;font-style:italic;color:#293647;background:#f8f9fb;border-radius:6px;padding:8px 10px;white-space:nowrap}
+.tx-formula .fx sub,.tx-formula .fx sup{font-size:.68em;font-style:normal}
+.tx-formula .sum{font-style:normal;font-size:1.25em}
+.tx-formula .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center}
+.tx-formula .frac>span:first-child{border-bottom:1px solid #5b6b80;padding:0 4px}
+.tx-formula .frac>span:last-child{padding:0 4px}
+.tx-formula p{font-size:11.5px;line-height:1.65;color:#5b6b80;margin:8px 0 0}
+@media(prefers-reduced-motion:reduce){#tx-lab #tx-flow .grow,#tx-lab #tx-flow .slide,#tx-lab #tx-flow .widen{animation:none}#tx-flow .xdim{transition:none}}
+.tx-formula .sum{display:inline-block;margin:0 2px}
+/* focus: when attention is open, the block frame recedes too (still clickable) */
+#tx-flow.expanded .frame{opacity:.35}
+#tx-flow.expanded [data-stepper=block]{opacity:.45;transition:opacity .2s}
+#tx-flow.expanded [data-stepper=block]:hover,#tx-flow.expanded [data-stepper=block]:focus-within{opacity:1}
+/* click-to-open attention head; stages arrive one after another */
+#tx-flow:not(.expanded) .head-part{cursor:zoom-in}
+#tx-flow .attn-label:focus{outline:none}
+#tx-flow .attn-label:focus-visible text{fill:#7f58a3;text-decoration:underline}
+@keyframes tx-late{from{opacity:0}to{opacity:1}}
+.attn-stage h3 .fm{font:italic 400 13px Georgia,"Times New Roman",serif;color:#7f58a3;background:#f5f0fa;border-radius:5px;padding:2px 8px;margin-left:8px;white-space:nowrap}
+.attn-stage h3 .fm sup,.attn-stage h3 .fm sub{font-size:.7em;font-style:normal}
+.attn-stage h3{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0}
+#tx-flow .cell.hot{stroke:#293647;stroke-width:1.6}
+/* opening timeline: lines draw in, dot-product dots pop one by one, later stages slide out and slowly turn into themselves */
+#tx-lab #tx-flow .grow{animation:tx-grow .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--at)}
+#tx-lab #tx-flow .draw{stroke-dasharray:1;animation:tx-draw 1.2s cubic-bezier(.2,.7,.3,1) both;animation-delay:var(--at)}
+@keyframes tx-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+#tx-lab #tx-flow .cell.pop{transform-box:fill-box;transform-origin:center;animation:tx-pop .6s cubic-bezier(.2,.8,.3,1) backwards;animation-delay:var(--at)}
+@keyframes tx-pop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:none}}
+#tx-lab #tx-flow .cell.turn{animation:tx-turn 1s ease-in-out backwards;animation-delay:var(--at)}
+@keyframes tx-turn{from{fill:var(--f0);fill-opacity:var(--o0);stroke:var(--s0)}to{fill:var(--f1);fill-opacity:var(--o1);stroke:var(--s1)}}
+#tx-lab #tx-flow .band.late,#tx-lab #tx-flow .fv.late{animation:tx-late .5s ease backwards;animation-delay:var(--at)}
+@media(prefers-reduced-motion:reduce){#tx-lab #tx-flow .draw,#tx-lab #tx-flow .cell.pop,#tx-lab #tx-flow .cell.turn,#tx-lab #tx-flow .band.late,#tx-lab #tx-flow .fv.late{animation:none;stroke-dasharray:none}}
+#tx-flow .out-name rect{fill:transparent;stroke:transparent}
+#tx-flow .out-name text{font-size:12px;fill:#7f58a3}
+#tx-flow .out-name:hover rect,#tx-flow .out-name:focus-visible rect{fill:#f5f0fa;stroke:#b59ccd}
+#tx-flow:focus{outline:none}
+/* hoverable MLP label and the fan of lines into the probabilities */
+#tx-flow .mlp-name rect{fill:transparent;stroke:transparent}
+#tx-flow .mlp-name text{font:10px var(--mono);letter-spacing:.6px;fill:#9aabc1}
+#tx-flow .mlp-name:hover rect,#tx-flow .mlp-name:focus-visible rect{fill:#f5f0fa;stroke:#b59ccd}
+#tx-flow .mlp-name:hover text,#tx-flow .mlp-name:focus-visible text{fill:#684686}
+#tx-flow .fan-hit path{fill:transparent;stroke:none;pointer-events:all}
+#tx-flow .fan-hit{cursor:help}
+#tx-flow .fan-hit:hover path,#tx-flow .fan-hit:focus-visible path{fill:#7f58a30f}
+#tx-flow .prob-part:has(.fan-hit:hover) .pc{stroke:#7f58a3}
+/* sampling controls with a formula card on hover */
+.tx-controls .has-formula{cursor:help;text-decoration:underline dotted #b6c2d2;text-underline-offset:3px}
+.tx-controls .has-formula:hover,.tx-controls .has-formula:focus-visible{color:#684686;text-decoration-color:#b59ccd}
+.tx-controls span.has-formula:focus{outline:none}
+.tx-controls .radios label.has-formula{cursor:pointer}
+/* block change: the old block contracts into one edge of the frame while the new one grows out of the other */
+#tx-flow[data-swap=block][data-dir=next] .swap:is(.head-part,.block-part){transform-origin:var(--oxR) 50%}
+#tx-flow[data-swap=block][data-dir=next] .ghost{transform-origin:var(--oxL) 50%}
+#tx-flow[data-swap=block][data-dir=prev] .swap:is(.head-part,.block-part){transform-origin:var(--oxL) 50%}
+#tx-flow[data-swap=block][data-dir=prev] .ghost{transform-origin:var(--oxR) 50%}
+/* embedding and probabilities open in place too */
+#tx-flow:not(.expanded) [data-zone]{cursor:zoom-in}
+#tx-flow.expanded [data-zone]{cursor:default}
+#tx-flow [data-expand]:focus{outline:none}
+#tx-flow [data-expand]:focus-visible text{fill:#3667e4;text-decoration:underline}
+#tx-flow .emb-arrow{stroke:#b6c2d2;stroke-width:1.2;fill:none}
+#tx-flow .emb-key{font-size:10px;fill:#9aabc1}
+#tx-flow .emb-num{font:11px var(--mono);fill:#5b6b80}
+#tx-flow .emb-op{font-size:15px;fill:#9aabc1}
+#tx-flow .prob-hit{fill:transparent}
+#tx-flow .prob-bg{fill:#fff;opacity:.95}
+#tx-flow .prob .pl,#tx-flow .prob .ps,#tx-flow .prob .pk{font:11px var(--mono);fill:#9aabc1}
+#tx-flow .prob .nbg{fill:#f8f9fb}
+#tx-flow .prob.kept .pl,#tx-flow .prob.kept .ps,#tx-flow .prob.kept .pk{fill:#3f4f63}
+#tx-flow .prob.kept .nbg{fill:#f1f4f8}
+#tx-flow .prob.sampled .pl,#tx-flow .prob.sampled .ps,#tx-flow .prob.sampled .pk{fill:#684686;font-weight:600}
+#tx-flow .prob.sampled .nbg{fill:#f5f0fa}
+#tx-flow[data-open=probabilities] .prob:hover .prob-hit{fill:#3667e40d}
+#tx-lab #tx-flow .late:not(.band):not(.fv){animation:tx-late .45s ease backwards;animation-delay:var(--at)}
+.tx-formula .prob-card.bare{border:0;border-radius:0;font-size:12px}
+.tx-formula .prob-card.bare h3{background:none;padding:0 0 8px;font-size:12px}
+.tx-formula .prob-card.bare ol{padding:0;gap:9px}
+.tx-formula:has(.prob-card.bare){width:400px}
+@media(prefers-reduced-motion:reduce){#tx-lab #tx-flow .late{animation:none}}

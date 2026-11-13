@@ -17,13 +17,14 @@ function grownText(tokens, start, markNewest) {
 
 /* ---------- The machine: words in → black box → a list of guesses ---------- */
 // `pick` is the word the loop will take next (highlighted); bars are buttons when `choosable`.
-function machine(el, context, prediction, {pick = null, choosable = false, fresh = false, newest = -1} = {}) {
+function machine(el, context, prediction, {pick = null, choosable = false, fresh = false, newest = -1, step = false} = {}) {
  const shown = context.slice(-9), hidden = context.length - shown.length;
  let rows = prediction.candidates.slice(0, 5);
  if (pick && !rows.some(c => c.token === pick)) rows = [...rows.slice(0, 4), prediction.all.find(c => c.token === pick)];
  const max = rows[0]?.p || 1;
- el.classList.toggle('fresh', fresh && !reduced.matches);
- el.innerHTML = `<div class="mc-in"><p class="string-label">THE TEXT SO FAR</p><div class="mc-words">${hidden > 0 ? '<span class="mc-more">…</span>' : ''}${shown.map((w, i) => `<span class="mc-word ${hidden + i === newest ? 'new' : ''}" style="--d:${i * 45}ms">${esc(displayToken(w))}</span>`).join('')}</div></div>
+ el.classList.toggle('fresh', fresh && !step && !reduced.matches);
+ el.classList.toggle('step', step && !reduced.matches);   // one word was added: only the changed parts animate
+ el.innerHTML = `<div class="mc-in"><p class="string-label">THE TEXT SO FAR</p><div class="mc-words">${hidden > 0 ? '<span class="mc-more">…</span>' : ''}${shown.map((w, i) => `<span class="mc-word ${hidden + i === newest ? 'new' : ''}" data-i="${hidden + i}" style="--d:${i * 45}ms">${esc(displayToken(w))}</span>`).join('')}</div></div>
  <span class="mc-arrow" aria-hidden="true"><i></i></span>
  <div class="mc-box" role="img" aria-label="The language model, shown as a black box"><b>LLM</b><small>black box</small></div>
  <span class="mc-arrow out" aria-hidden="true"><i></i></span>
@@ -52,30 +53,72 @@ const freshSeed = () => (Math.random() * 4294967296) >>> 0;
 const loop = {prompt: 0, context: [], start: 0, dice: false, seed: 7, roll: null, asked: 1, timer: null, playing: false};
 const loopDone = () => loop.context.at(-1) === END || (loop.context.length > loop.start && loop.context.at(-1) === '.') || !predict(loop.context).candidates.length || loop.context.length - loop.start >= 60;
 function loopRoll() { if (!loop.dice) { loop.roll = null; return; } const r = nextRandom(loop.seed); loop.seed = r.seed; loop.roll = r.value; }
-function renderLoop(fresh = false, newest = -1) {
+function renderLoop(fresh = false, newest = -1, step = false) {
  chips($('#loop-prompts'), NEXT_WORD_PROMPTS.map(p => `${sentenceCase(p)} …`), loop.prompt, 'data-loop');
  $$('[data-loop-pick]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.loopPick === 'dice') === loop.dice)));
  const done = loopDone(), visible = loop.context.filter(t => t !== END), added = visible.length - loop.start;
  $('#loop-text').innerHTML = grownText(visible, loop.start, fresh && newest >= 0) + (done ? '' : '<i class="caret" aria-hidden="true"></i>');
  if (done) { $('#loop-machine').innerHTML = '<p class="mc-finished">The box added a full stop. The sentence is finished.</p>'; $('#loop-machine').classList.remove('fresh'); }
- else { const prediction = predict(loop.context); machine($('#loop-machine'), loop.context, prediction, {pick: choose(prediction, loop.roll), choosable: true, fresh, newest}); }
+ else { const prediction = predict(loop.context); machine($('#loop-machine'), loop.context, prediction, {pick: choose(prediction, loop.roll), choosable: true, fresh, newest, step}); }
  $('#loop-lab').classList.toggle('done', done);
  $('#loop-result').textContent = done ? `${added} word${added === 1 ? '' : 's'} added, one guess at a time. Nothing was planned ahead.`
   : added === 0 ? 'The highlighted word will be added next. Or click another word to choose it yourself.'
   : `Added “${displayToken(loop.context.at(-1))}”. The longer text goes back into the box.`;
  $('#loop-next').disabled = done || loop.playing; $('#loop-play').disabled = done && !loop.playing; $('#loop-play').textContent = loop.playing ? 'Pause' : '▶ Keep going';
  $('#loop-count').textContent = `The box has been asked ${loop.asked} time${loop.asked === 1 ? '' : 's'}`;
+ placeLoopBack();
 }
+// The return arrow must end where the chosen word really goes: right after the last word of the text.
+function placeLoopBack() {
+ const back = $('#loop-lab .loop-back'), words = $$('#loop-machine .mc-word'), last = words[words.length - 1];
+ if (!back || !last || !back.offsetParent) return;
+ back.style.marginLeft = '0px'; back.style.setProperty('--rise', '0px');
+ const start = back.getBoundingClientRect(), word = last.getBoundingClientRect();
+ back.style.marginLeft = `${Math.max(0, word.right + 7 - start.left)}px`;
+ back.style.setProperty('--rise', `${Math.max(0, start.top - word.bottom - 7)}px`);
+}
+addEventListener('resize', placeLoopBack);
 function loopStop() { if (loop.timer !== null) clearTimeout(loop.timer); loop.timer = null; loop.playing = false; }
 function loopStart(prompt = loop.prompt) { loopStop(); loop.prompt = prompt; loop.context = tokenize(NEXT_WORD_PROMPTS[prompt]); loop.start = loop.context.length; loop.seed = freshSeed(); loop.asked = 1; loopRoll(); renderLoop(true); }
 function loopAdd(token) {
  if (loopDone()) return;
- const prediction = predict(loop.context);
- loop.context.push(token ?? choose(prediction, loop.roll));
+ const prediction = predict(loop.context), chosen = token ?? choose(prediction, loop.roll), box = $('#loop-machine');
+ // remember where things are, so only what changes has to move
+ const from = [...box.querySelectorAll('.mc-row')].find(r => r.dataset.choose === chosen)?.querySelector('.mc-cand')?.getBoundingClientRect();
+ const before = new Map([...box.querySelectorAll('.mc-word')].map(w => [w.dataset.i, w.getBoundingClientRect()]));
+ const bars = box.querySelector('.mc-bars'), oldBars = bars?.cloneNode(true), held = {height: box.offsetHeight, top: bars?.getBoundingClientRect().top};
+ loop.context.push(chosen);
  if (!loopDone()) { loop.asked++; loopRoll(); }
- renderLoop(true, loop.context.length - 1);
+ renderLoop(true, loop.context.length - 1, true);
+ if (!reduced.matches && !loopDone()) loopMotion(box, before, from, oldBars, held);
 }
-function loopPlay() { loop.timer = setTimeout(() => { loop.timer = null; if (!loop.playing || document.hidden || loopDone()) { loopStop(); renderLoop(); return; } loopAdd(); if (loopDone()) { loopStop(); renderLoop(); } else loopPlay(); }, reduced.matches ? 250 : 1100); }
+// After a word is added: earlier words slide left to make room, the chosen word travels back along the
+// return arrow to the end of the text, and the old guesses fade while the box is asked again.
+function loopMotion(box, before, from, oldBars, held) {
+ const ease = 'cubic-bezier(.2,.7,.2,1)';
+ box.style.minHeight = `${held.height}px`;   // keep the lab the same height until the old guesses have gone
+ for (const w of box.querySelectorAll('.mc-word:not(.new)')) {
+  const was = before.get(w.dataset.i); if (!was) continue;
+  const now = w.getBoundingClientRect(), dx = was.left - now.left, dy = was.top - now.top;
+  if (dx || dy) w.animate([{transform: `translate(${dx}px,${dy}px)`}, {transform: 'none'}], {duration: 450, easing: ease});
+ }
+ const word = box.querySelector('.mc-word.new'), back = $('#loop-lab .loop-back');
+ if (word && from) {
+  const now = word.getBoundingClientRect(), sx = from.left - now.left, sy = from.top + from.height / 2 - (now.top + now.height / 2);
+  const rail = back && back.offsetParent ? back.getBoundingClientRect().bottom - (now.top + now.height / 2) : null;
+  const frames = rail === null || rail < 20
+   ? [{transform: `translate(${sx}px,${sy}px)`}, {transform: 'none'}]
+   : (() => { const down = Math.abs(rail - sy), across = Math.abs(sx), up = Math.abs(rail), all = down + across + up || 1;
+      return [{transform: `translate(${sx}px,${sy}px)`, offset: 0}, {transform: `translate(${sx}px,${rail}px)`, offset: down / all}, {transform: `translate(0px,${rail}px)`, offset: (down + across) / all}, {transform: 'none', offset: 1}]; })();
+  word.classList.add('flying');
+  word.animate(frames, {duration: 900, easing: 'ease-in-out'}).finished.catch(() => {}).then(() => word.classList.remove('flying'));
+ }
+ const out = box.querySelector('.mc-out');
+ if (oldBars && out) { oldBars.classList.add('mc-bars-old'); oldBars.setAttribute('aria-hidden', 'true'); oldBars.querySelectorAll('button').forEach(b => { b.disabled = true; b.removeAttribute('data-choose'); }); out.append(oldBars); oldBars.style.top = `${held.top - out.getBoundingClientRect().top}px`;
+  oldBars.animate([{opacity: 1}, {opacity: 0}], {duration: 700, delay: 500, fill: 'forwards'}).finished.catch(() => {}).then(() => { oldBars.remove(); box.style.minHeight = ''; placeLoopBack(); }); }
+ else box.style.minHeight = '';
+}
+function loopPlay() { loop.timer = setTimeout(() => { loop.timer = null; if (!loop.playing || document.hidden || loopDone()) { loopStop(); renderLoop(); return; } loopAdd(); if (loopDone()) { loopStop(); renderLoop(); } else loopPlay(); }, reduced.matches ? 250 : 3100); }
 $('#loop-prompts').addEventListener('click', e => { const b = e.target.closest('[data-loop]'); if (b) loopStart(+b.dataset.loop); });
 $('#loop-next').addEventListener('click', () => { loopStop(); loopAdd(); });
 $('#loop-play').addEventListener('click', () => { if (loop.playing) { loopStop(); renderLoop(); return; } loop.playing = true; renderLoop(); loopPlay(); });

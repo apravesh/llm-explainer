@@ -1,0 +1,25 @@
+/* Glossary & resources */
+.gl-search{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 0 18px;position:sticky;top:0;z-index:2;background:var(--page)}
+.gl-search label{font:9px var(--mono);letter-spacing:1.2px;color:#8395ac;text-transform:uppercase}
+.gl-search input{flex:0 1 320px;min-width:0;font:14px var(--sans);color:#293647;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:9px 12px}
+.gl-search input:focus{outline:3px solid #97b4ff;outline-offset:1px;border-color:#7d9cec}
+#gl-count{font-size:12px;color:#8a9bb1}
+.gl-group .section-heading{margin-bottom:16px}
+.gl-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;margin:0}
+.gl-term{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:14px 16px;scroll-margin-top:76px}
+.gl-term:target{border-color:#7d9cec;box-shadow:0 0 0 3px #3667e41f}
+.gl-term dt{font-size:15px;font-weight:600;color:#293647;margin:0 0 5px}
+.gl-term dt small{font:400 12px var(--sans);color:#8a9bb1;margin-left:6px}
+.gl-term dd{margin:0;font-size:13px;line-height:1.7;color:#5b6b80}
+.gl-more{white-space:nowrap;font-size:12px;color:#5b7fc7;text-decoration:none;margin-left:4px}
+.gl-more:hover{text-decoration:underline}
+.gl-term[hidden],.gl-group[hidden]{display:none}
+.gl-none{font-size:13px;color:#8a9bb1;padding:18px 0}
+.gl-resources{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:820px;counter-reset:res}
+.gl-resources li{counter-increment:res;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:14px 16px 14px 46px;position:relative}
+.gl-resources li::before{content:counter(res,decimal-leading-zero);position:absolute;left:16px;top:17px;font:10px var(--mono);color:#a3b1c5}
+.gl-resources a{font-size:15px;font-weight:600;color:#3667e4;text-decoration:none}
+.gl-resources a:hover{text-decoration:underline}
+.gl-kind{font:9px var(--mono);letter-spacing:1px;text-transform:uppercase;color:#8395ac;margin-left:10px;white-space:nowrap}
+.gl-resources p{font-size:13px;line-height:1.7;color:#5b6b80;margin:5px 0 0}
+@media(max-width:760px){.gl-list{grid-template-columns:1fr}.gl-search{position:static}}

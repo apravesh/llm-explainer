@@ -43,7 +43,7 @@ test('SGD updates every parameter by the mean-loss gradient and repeated trainin
 });
 test('architecture grouping remains intact and training has its own three pages',async()=>{
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),home=await read('index.html');assert.match(home,/<h2 id="chapters-title">Architecture<\/h2>/);assert.match(home,/<h2 id="training-title">Training<\/h2>/);
- const training=home.slice(home.indexOf('<section id="training"'));assert.deepEqual([...training.matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['pretraining.html','post-training-instruct.html','post-training-rl.html']);
+ const training=home.slice(home.indexOf('<section id="training"'),home.indexOf('<section id="reference"'));assert.deepEqual([...training.matchAll(/class="chapter-link" href="([^"]+)"/g)].map(m=>m[1]),['pretraining.html','post-training-instruct.html','post-training-rl.html']);
  for(const page of ['pretraining.html','post-training-instruct.html','post-training-rl.html']){const html=await read(page);for(const [,href] of html.matchAll(/(?:href|src)="([^"]+)"/g))if(!/^(https?:|#|\.\/$)/.test(href)){assert.ok(!href.startsWith('/'));await access(new URL('../'+href.split('#')[0],import.meta.url));}}
  assert.match(await read('post-training-rl.html'),/GRPO/);
  const html=await read('pretraining.html');for(const id of ['data','tokenizer','learn','train-batch','train-next','bpe-next','corpus-documents'])assert.ok(html.includes(`id="${id}"`));assert.match(html,/separate from the BPE demo/);assert.match(html,/not generalization/);assert.match(html,/not a pretrained LLM/);
