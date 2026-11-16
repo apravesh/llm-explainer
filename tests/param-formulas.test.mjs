@@ -35,7 +35,7 @@ test('GQA and SwiGLU change the block formulas: 2d² + 2·d·d_kv and 3·d·f',(
 test('the page is two parts: weights on the Transformer-style diagram first, then the work',async()=>{
  const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8'),html=await read('analytics.html'),app=await read('src/param-formulas-app.mjs');
  assert.match(html,/<h1>Where do a model's weights <em>actually live\?<\/em><\/h1>/);
- assert.match(html,/PART 1 \/ COUNT THE WEIGHTS/);assert.match(html,/PART 2 \/ COUNT THE WORK/);
+ assert.match(html,/01 \/ COUNT THE WEIGHTS/);assert.match(html,/02 \/ COUNT THE WORK/);
  assert.ok(html.indexOf('id="formula-models"')<html.indexOf('id="part-2"')&&html.indexOf('id="part-2"')<html.indexOf('id="calculator"'));
  assert.ok(html.indexOf('id="pf-symbols"')<html.indexOf('id="pf-diagram"'),'V, d and the other letters are defined before the diagram');assert.match(app,/vocabulary size: how many different tokens the model knows/);assert.match(app,/width: how many numbers describe one/);assert.match(app,/processed at once: no weights depend on it, only the work/);assert.ok(app.includes('id="pf-sym-n"'));
  for(const part of ["row('W_Q', 'd × d', c.d, c.d, 'query')","row('W_O', 'd × d', c.d, c.d, 'output')","row('W_in', 'f × d', c.f, c.d, 'widen')","row('W_out', 'd × f', c.d, c.f, 'narrow')",'pf-pop-sum'])assert.ok(app.includes(part),part);
@@ -71,13 +71,13 @@ test('work formulas: two operations per weight used, mixing without weights, and
  const v=workFormulas(PF_PRESETS.pixtral.config,{n:48,mode:'write'});assert.equal(v.mode,'read');assert.ok(!part(v,'head')&&part(v,'proj-out').flops>0);
  assert.equal(compactWork(213e9),'213 billion');assert.equal(compactWork(3.87e12),'3.87 trillion');assert.equal(compactWork(0),'0');
 });
-test('Part 2 opens with the same diagram counting work, for the model picked in Part 1',async()=>{
+test('Compute opens with the same diagram counting work, for the model picked in Capacity',async()=>{
  const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8'),html=await read('analytics.html'),app=await read('src/param-formulas-app.mjs');
  for(const id of ['pw-controls','pw-diagram','pw-bars','pw-insight'])assert.match(html,new RegExp(`id="${id}"`),id);
  assert.ok(html.indexOf('id="pw-diagram"')>html.indexOf('id="part-2"')&&html.indexOf('id="pw-diagram"')<html.indexOf('id="calculator"'));
  for(const part of ['Attention · mixing (no weights)','Writing is cheap per token because of the cache','Weights that are stored are not always weights that work'])assert.ok(html.includes(part),part);
  assert.match(app,/function archFlow\(r, w = null\)/);assert.match(app,/function workCard\(w, key\)/);assert.match(app,/renderWork\(\);\n\}/);
- for(const part of ['Read a prompt','Write one more token','2 · Mixing (no weights at all)','Model from Part 1'])assert.ok(app.includes(part),part);
+ for(const part of ['Read a prompt','Write one more token','2 · Mixing (no weights at all)','Model from Capacity'])assert.ok(app.includes(part),part);
 });
 test('weights that are shared are drawn once: one MLP, one MoE layer, one projector for all tokens',async()=>{
  const app=await readFile(new URL('../src/param-formulas-app.mjs',import.meta.url),'utf8');

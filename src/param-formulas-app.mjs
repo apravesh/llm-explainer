@@ -149,7 +149,7 @@ function symbols(r) {
  return (c.model === 'vision' ? item('p', c.p, 'patch size in pixels: an image is cut into p × p squares') : item('V', n(c.V), 'vocabulary size: how many different tokens the model knows'))
   + item('d', n(c.d), `width: how many numbers describe one ${c.model === 'vision' ? 'patch' : 'token'} inside the model`)
   + item('L', c.L, 'blocks stacked one after another') + item('f', n(c.f), 'width inside the MLP')
-  + `<span><i><b>n</b> = <em id="pf-sym-n">${n(work.n)}</em></i><small>${c.model === 'vision' ? 'patches' : 'tokens'} processed at once: no weights depend on it, only the work (set in Part 2)</small></span>`
+  + `<span><i><b>n</b> = <em id="pf-sym-n">${n(work.n)}</em></i><small>${c.model === 'vision' ? 'patches' : 'tokens'} processed at once: no weights depend on it, only the work (set under Compute)</small></span>`
   + (c.model === 'moe' ? item('E', c.E, 'experts per block') + item('k', c.k, 'experts each token runs') : '') + (c.model === 'vision' ? item('D', n(c.D), 'width of the language model it feeds') : '');
 }
 
@@ -202,7 +202,7 @@ function renderWork() {
  const w = workFormulas(state, {n: work.n, mode: vision ? 'read' : work.mode}); currentWork = w;
  el.innerHTML = archFlow(w.weights, w);
  const opts = [16, 128, 1024, 8192, 32768].map(v => `<option value="${v}"${v === work.n ? ' selected' : ''}>${v.toLocaleString('en-US')}</option>`).join('');
- document.getElementById('pw-controls').innerHTML = `<span class="pw-model">Model from Part 1: <b>${preset === 'custom' ? 'your own dimensions' : PF_PRESETS[preset].label.split(' · ')[0]}</b></span>
+ document.getElementById('pw-controls').innerHTML = `<span class="pw-model">Model from Capacity: <b>${preset === 'custom' ? 'your own dimensions' : PF_PRESETS[preset].label.split(' · ')[0]}</b></span>
  <span class="pf-switch" role="group" aria-label="Workload"><button type="button" data-pw-mode="read" aria-pressed="${w.mode === 'read'}">${vision ? 'Read an image' : 'Read a prompt'}</button>${vision ? '' : `<button type="button" data-pw-mode="write" aria-pressed="${w.mode === 'write'}">Write one more token</button>`}</span>
  <label>${vision ? 'Patches' : w.mode === 'write' ? 'Tokens already in the context' : 'Tokens in the prompt'} n<select id="pw-n">${opts}</select></label>`;
  const wb = Object.fromEntries(Object.entries(w.weights.byCat).map(([k, v]) => [k, v.stored]));
