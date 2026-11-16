@@ -117,14 +117,13 @@ function flow(){
  s+=`<g transform="translate(${dE})"><g class="${anim?'slide':''}" style="--from:${fromE}px">`;
  s+=`<g class="stage${dimFrame}" style="--d:1"><rect class="frame${anim?' widen':''}" style="--sx:${anim?((fw+prev.dA+prev.dM)/(fw+dA+dM)).toFixed(4):1}" x="${fx}" y="${fy}" width="${fw+dA+dM}" height="${fh}" rx="10"/>${chip('block',fx+18,fy,blockLabel(),176)}</g>`;
  s+=`<g class="stage${dimEmb}" style="--d:0" data-zone="embedding">`;
- ps.forEach((p,i)=>{s+=`<g data-t="${i}">${EE?'':`<path class="fg" d="M118,${yc(i)} H130" stroke-width="1.1"/>`}<rect data-dim="vector(1024)" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/></g>`;});
+ ps.forEach((p,i)=>{s+=`<g data-t="${i}">${EE?'':`<path class="fg" d="M118,${yc(i)} H130" stroke-width="1.1"/>`}<rect data-dim="hidden state of ${patchName(p)} going into the block · vector(1024)" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/></g>`;});
  s+=`</g><g class="stage block-part${dimSide}" style="--d:1">`;
- ps.forEach((p,i)=>{
-  const y=yc(i);
-  [['q',-12],['k',0],['v',12]].forEach(([g,dy])=>{
-   s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,232,y+dy)}" stroke-width="1.2"/><rect class="${g}" data-dim="${names[g]} weights · matrix(1,024 × 1,024)" x="232" y="${y+dy-4.5}" width="9" height="9" rx="1.5" opacity=".75"/><text class="mini" x="246" y="${y+dy+3}">${g.toUpperCase()}</text></g>`;
-  });
- });
+ // One set of Query, Key and Value matrices. Every patch's vector goes through the same three and comes out as its own q, k and v.
+ const cy=(yc(0)+yc(n-1))/2,sq=i=>cy+(yc(i)-cy)*0.5,qt=sq(0)-14,qb=sq(n-1)+14;   // squeezed rows inside the shared blocks
+ s+=`<rect class="wblock" x="227" y="${qt}" width="26" height="${qb-qt}" rx="6"/>`;
+ [['q',230],['k',237.5],['v',245]].forEach(([g,x])=>{s+=`<rect class="${g} wstripe" data-dim="${names[g]} weights · matrix(1,024 × 1,024) · the same for every patch" x="${x}" y="${qt+3}" width="5" height="${qb-qt-6}" rx="2.5" opacity=".7"/><text class="mini" x="${x+2.5}" y="${qt-5}" text-anchor="middle">${g.toUpperCase()}</text>`;});
+ ps.forEach((p,i)=>{const y=yc(i);s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,227,sq(i))}" stroke-width="1.2"/>${[['q',-6.5],['k',0],['v',6.5]].map(([g,dy])=>`<circle class="${g}" cx="256" cy="${sq(i)+dy}" r="2"/>`).join('')}</g>`;});
  s+=`</g>`;
  // ----- head card
  s+=`<g class="stage head-part${dimBlock}" style="--d:2" data-zone="attention">`;
@@ -135,8 +134,8 @@ function flow(){
   // Query and Key are rotated by 2D RoPE before they meet; Value is not
   if(g!=='v')s+=`<g class="stage-name rope-name" data-formula="9" tabindex="0" role="button" aria-label="2D RoPE on the ${names[g]}: show the formula"><rect x="${g==='q'?500:488}" y="${ty(g,0)-24}" width="58" height="16" rx="8"/><text x="${(g==='q'?500:488)+29}" y="${ty(g,0)-12.5}" text-anchor="middle">↻ 2D RoPE</text></g>`;
   ps.forEach((p,i)=>{
-   const y=ty(g,i),dy=g==='q'?-12:g==='k'?0:12;
-   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(254,yc(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${patchName(p)}</text><rect class="${g}" data-dim="${names[g]}, this head · vector(64)" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${names[g]}, this head · vector(64)" x="450" y="${y-5}" width="16" height="10"/></g>`;
+   const y=ty(g,i),dy=g==='q'?-6.5:g==='k'?0:6.5;
+   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(258,sq(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${patchName(p)}</text><rect class="${g}" data-dim="${names[g]} of ${patchName(p)}, this head · vector(64)" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${names[g]} of ${patchName(p)}, this head · vector(64)" x="450" y="${y-5}" width="16" height="10"/></g>`;
   });
  }
  s+=`</g><g class="stage head-part${dimBlock}" style="--d:3" data-zone="attention">`;
@@ -168,7 +167,7 @@ function flow(){
  s+=`<g class="${anim?'slide':''}" style="--from:${from}px"><path class="band${opening?' late':''}" style="--at:${T3}ms;fill:#e6dcf0" d="M${mr},${ty('q',0)-6} L${outX},${ty('q',0)-2} V${ty('q',n-1)+2} L${mr},${ty('q',n-1)+6} Z"/>`;
  s+=`<g class="stage-name out-name" data-formula="3" tabindex="0" role="button" aria-label="Out: show the formula"><rect x="${outX-13}" y="${ty('q',0)-27}" width="40" height="19" rx="9"/><text x="${outX+7}" y="${ty('q',0)-14}" text-anchor="middle">Out</text></g>`;
  ps.forEach((p,i)=>{
-  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="Out, this head · vector(64)" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
+  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="attention output of ${patchName(p)}, this head · vector(64)" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
  });
  s+=`</g></g>`;
  s+=`<g class="stage${dimBlock}" style="--d:2">${chip('head',346,top,headLabel(),282)}</g>`;
@@ -177,17 +176,19 @@ function flow(){
  const xo=902+dM,mpill=(k,x,w,label,at)=>`<g class="stage-name${late(openM,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+40}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+53}" text-anchor="middle">${label}</text></g>`;
  s+=`<g class="${dimMlp}" data-zone="mlp"><g class="stage" style="--d:4"><g class="stage-name mlp-name" data-formula="4" tabindex="0" role="button" aria-label="Gated MLP: show the formula"><rect x="${806-9}" y="${fy+21}" width="74" height="19" rx="9"/><text x="${806+28}" y="${fy+34}" text-anchor="middle">Gated MLP</text></g>${EM?mpill(10,893,58,'Linear W₁',300)+mpill(11,963,44,'SiLU',900)+mpill(12,1024,64,'Gate · W₃',1400)+mpill(13,1116,58,'Linear W₂',2000):''}</g>`;
  s+=`<g class="stage block-part" style="--d:4">`;
+ // One MLP. Its weights are shared: every patch's vector goes through the same matrices and comes out changed in its own way.
+ if(!EM){const mt=sq(0)-22,mb=sq(n-1)+22;s+=`<path class="band" style="fill:#d3dcee" d="M828,${mt+12} L846,${mt} V${mb} L828,${mb-12} Z"/><rect class="mlp-one" data-dim="Gated MLP layer: W₁ and W₃ (expansion, 1,024 → 4,096) and W₂ (contraction, 4,096 → 1,024) · the same weights for every patch" x="846" y="${mt}" width="26" height="${mb-mt}" rx="4" fill="#b3c2e0"/><rect x="859" y="${mt}" width="13" height="${mb-mt}" rx="4" fill="#bcd9cc" style="pointer-events:none"/><path class="band" style="fill:#d3dcee" d="M872,${mt} L890,${mt+12} V${mb-12} L872,${mb} Z"/>`;}
  ps.forEach((p,i)=>{
   const y=yc(i),lit=illustrativeVector(7000+ps[i],5),gate=illustrativeVector(9000+ps[i],5);
-  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="vector(1024)" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
+  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="hidden state of ${patchName(p)} after attention · vector(1024)" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
   if(EM){
    const wide=(x,fill,dim)=>`<rect data-dim="${dim}" x="${x}" y="${y-22}" width="26" height="44" rx="3" fill="${fill}"/>`,cells=(x,vs,colour)=>vs.map((v,k)=>v>0?`<rect x="${x}" y="${(y-22+k*8.8).toFixed(1)}" width="26" height="8.8" fill="${colour}" opacity="${(0.35+0.6*v).toFixed(2)}" style="pointer-events:none"/>`:'').join('');
    s+=`<g class="${late(openM,300+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M816,${y-15} L880,${y-22} V${y+22} L816,${y+15} Z"/>${wide(880,'#b3c2e0','W₁ · x · vector(4096)')}</g>`;
    s+=`<g class="${late(openM,900+i*50).trim()}"><path class="emb-arrow" d="M910,${y}H944m-5,-4l5,4l-5,4"/>${wide(950,'#d3dcee','SiLU(W₁ · x) · vector(4096)')}${cells(950,lit,'#6681b5')}</g>`;
    s+=`<g class="${late(openM,1400+i*50).trim()}"><text class="emb-op" x="990" y="${y+5}" text-anchor="middle">⊙</text><path class="gate-wire" d="M811,${y+15} V${y+26} H1017 V${y+22}"/>${wide(1004,'#cfe3da','the gate, W₃ · x · vector(4096)')}${cells(1004,gate,'#5fae93')}<text class="emb-op" x="1044" y="${y+5}" text-anchor="middle">=</text>${wide(1058,'#d3dcee','gated vector · vector(4096)')}${cells(1058,lit.map((v,k)=>v>0&&gate[k]>0?v*gate[k]+0.25:0),'#6681b5')}</g>`;
-   s+=`<g class="${late(openM,2000+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M1084,${y-22} L${xo},${y-15} V${y+15} L1084,${y+22} Z"/><rect data-dim="vector(1024)" x="${xo}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
+   s+=`<g class="${late(openM,2000+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M1084,${y-22} L${xo},${y-15} V${y+15} L1084,${y+22} Z"/><rect data-dim="hidden state of ${patchName(p)} after the gated MLP · vector(1024)" x="${xo}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
   }else{
-   s+=`<path class="band" style="fill:#d3dcee" d="M816,${y-15} L846,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="vector(4096), gated" x="846" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/><rect x="859" y="${y-22}" width="13" height="44" rx="3" fill="#bcd9cc" style="pointer-events:none"/><path class="band" style="fill:#d3dcee" d="M872,${y-22} L902,${y-15} V${y+15} L872,${y+22} Z"/><rect data-dim="vector(1024)" x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
+   s+=`<path class="fg thru" d="${curve(816,y,830,sq(i))} H888 ${curve(888,sq(i),902,y).replace('M888,'+sq(i),'')}" stroke-width="1.2"/><rect data-dim="hidden state of ${patchName(p)} after the gated MLP · vector(1024)" x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
   }
   s+=`</g>`;
  });
@@ -198,7 +199,7 @@ function flow(){
  ps.forEach((p,i)=>{
   const y=yc(i);
   s+=`<g data-t="${i}"><path class="fg" d="M912,${y} H944" stroke-width="1.2"/>`;
-  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="vector(1024)" x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
+  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="hidden state of ${patchName(p)} after a later block · vector(1024)" x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
   s+=`</g>`;
  });
  s+=`</g></g></g>`;
@@ -211,7 +212,7 @@ function flow(){
   s+=`<rect class="prob-bg" x="952" y="42" width="420" height="${H-52}" rx="8"/>`+pill(14,1025,56,'Linear',300)+pill(15,1118,50,'GELU',900)+pill(16,1211,56,'Linear',1500);
   ps.forEach((p,i)=>{
    const y=yc(i),lit=illustrativeVector(5000+p,6),bar=(x,fill,dim)=>`<rect data-dim="${dim}" x="${x}" y="${y-24}" width="22" height="48" rx="3" fill="${fill}"/>`;
-   s+=`<g data-t="${i}"><path class="fg" d="M975,${y} H986" stroke-width="1.2"/><rect data-dim="final vector of ${patchName(p)} · vector(1024)" x="986" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
+   s+=`<g data-t="${i}"><path class="fg" d="M975,${y} H986" stroke-width="1.2"/><rect data-dim="final hidden state of ${patchName(p)}, after the last block · vector(1024)" x="986" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
    s+=`<g class="${late(openP,300+i*50).trim()}"><path class="band" style="fill:#d3e9df" d="M996,${y-15} L1060,${y-24} V${y+24} L996,${y+15} Z"/>${bar(1060,'#b9d9cb','W_a · h · vector(5120)')}</g>`;
    s+=`<g class="${late(openP,900+i*50).trim()}"><path class="emb-arrow" d="M1086,${y}H1146m-5,-4l5,4l-5,4"/>${bar(1152,'#d3e9df','after GELU · vector(5120)')}${lit.map((v,k)=>v>0?`<rect x="1152" y="${(y-24+k*8).toFixed(1)}" width="22" height="8" fill="#5fae93" opacity="${(0.35+0.6*v).toFixed(2)}" style="pointer-events:none"/>`:'').join('')}</g>`;
    s+=`<g class="${late(openP,1500+i*50).trim()}"><path class="emb-arrow" d="M1178,${y}H1238m-5,-4l5,4l-5,4"/>${bar(1244,'#8fc7b3',`image token for ${patchName(p)} · vector(5120)`)}<text class="proj-token" x="1274" y="${y+4}">image token</text></g></g>`;

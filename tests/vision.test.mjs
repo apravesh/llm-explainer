@@ -51,3 +51,10 @@ test('the earlier live-model page is kept, unlinked, as vision-live.html',async(
  const live=await read('vision-live.html'),home=await read('index.html'),build=await read('build.mjs');
  assert.match(live,/src="src\/full-app.mjs"/);assert.doesNotMatch(home,/vision-live\.html/);assert.match(build,/at\('vision-live.html'\)/);
 });
+
+test('src/vision-app.mjs: weights that exist once are drawn once (one Q/K/V block, one MLP)',async()=>{
+ const app=await (await import('node:fs/promises')).readFile(new URL('../src/vision-app.mjs',import.meta.url),'utf8');
+ assert.match(app,/class="wblock"/);assert.equal((app.match(/class="wblock"/g)||[]).length,1);
+ assert.match(app,/the same for every (token|patch)/);assert.doesNotMatch(app,/curve\(142,y,232,y\+dy\)/,'no per-token Q, K, V squares');
+ assert.match(app,/class="mlp-one"/);assert.match(app,/MLP layer: W(_in|₁ and W₃) \(expansion, /);assert.match(app,/\(contraction, [\d,]+ → [\d,]+\) · the same weights for every (token|patch)/);
+});

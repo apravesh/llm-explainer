@@ -122,3 +122,97 @@
 .pf-controls{margin-top:12px}
 .pf-qkvo.gqa{display:flex;gap:3px;align-items:center}
 .pf-expert i{width:28px;height:6px}
+
+/* ---- Part 1 diagram, in the Transformer page's visual language ---- */
+.pf-diagram{display:block;padding:10px 14px 6px;overflow-x:auto}
+.pf-diagram svg{display:block;width:100%;min-width:900px;height:auto}
+.pf-flow text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.pf-flow .pf-col{font-size:13px;fill:#7c8a9e}
+.pf-flow .pf-tok{font-size:13px;fill:#44546a}
+.pf-flow .pf-mini{font-size:9px;fill:#7c8a9e}
+.pf-flow .pf-sub{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.6px;fill:#9aabc1}
+.pf-flow .pf-name{font-size:11.5px;fill:#607b9f}
+.pf-flow .pf-lbl{font-size:12px}.pf-flow .pf-lbl.q{fill:#4f7be8}.pf-flow .pf-lbl.k{fill:#c7765b}.pf-flow .pf-lbl.v{fill:#458976}.pf-flow .pf-lbl.o{fill:#7f58a3}
+.pf-flow .pf-chip{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px;fill:#7c8a9e}.pf-flow .pf-chip.head{fill:#8a6bb0}
+.pf-flow .pf-chip-bg{fill:#fff}
+.pf-flow .pf-frame{fill:none;stroke:#aab8cc;stroke-width:1.3;stroke-dasharray:1 5;stroke-linecap:round}
+.pf-flow .pf-card{fill:#fff;stroke:#b59ccd;stroke-width:1.3;stroke-dasharray:1 5;stroke-linecap:round}
+.pf-flow .pf-wire,.pf-flow .pf-wq,.pf-flow .pf-wk,.pf-flow .pf-wv,.pf-flow .pf-wo,.pf-flow .pf-fan{fill:none;stroke-width:1.1}
+.pf-flow .pf-wire{stroke:#cdd6e2}.pf-flow .pf-wq{stroke:#7a9bec;opacity:.6}.pf-flow .pf-wk{stroke:#d79278;opacity:.55}.pf-flow .pf-wv{stroke:#68ab98;opacity:.5}.pf-flow .pf-wo{stroke:#b59ccd}.pf-flow .pf-fan{stroke:#b59ccd}
+.pf-flow .pf-vec{fill:#cdd6e2}.pf-flow .pf-vec.in{fill:#d0bfe1}.pf-flow .pf-vec.out{fill:#a9c0f3}
+.pf-flow .pf-patch{fill:#dfe8dc;stroke:#b9c5d6}
+.pf-flow .pf-q{fill:#4f7be8;opacity:.75}.pf-flow .pf-k{fill:#c7765b;opacity:.75}.pf-flow .pf-v{fill:#458976;opacity:.75}.pf-flow .pf-o{fill:#7f58a3}
+.pf-flow .pf-dot-cell{fill:#7f58a3}.pf-flow .pf-dot-cell.masked{fill:#fff;stroke:#e2e8f0}
+.pf-flow .pf-band{fill:#d3dcee;opacity:.5}.pf-flow .pf-band.green{fill:#d3e9df;opacity:.8}
+.pf-flow .pf-wide{fill:#b3c2e0}.pf-flow .pf-gate{fill:#bcd9cc}
+.pf-flow .pf-more{fill:#d3e0fa}
+.pf-flow .pf-router{fill:#fff7ec;stroke:#e3c690}.pf-flow .pf-router-t{font:9px ui-monospace,monospace;fill:#a9773a}
+.pf-flow .pf-expert{fill:#fff;stroke:#c9d3e2;stroke-dasharray:2 2}.pf-flow .pf-expert.on{fill:#7c93c9;stroke:#5f78b5;stroke-dasharray:none}
+.pf-flow .pf-sum{fill:#fff;stroke:#9fb0cc}.pf-flow .pf-sum-t{font-size:10px;fill:#607b9f}
+.pf-flow .pf-word{fill:#dfe5ee}.pf-flow .pf-pbar{fill:#b59ccd}
+.pf-flow .pf-llmvec{fill:#8fc7b3}.pf-flow .pf-llm{fill:#eef7f3;stroke:#bfe0d2}.pf-flow .pf-llm-t{font:9px ui-monospace,monospace;letter-spacing:.14em;fill:#5f9d88}
+.pf-flow .pf-hitbox{fill:transparent;stroke:none}
+.pf-flow .pf-zone{cursor:help}
+.pf-flow .pf-zone.pf-hit .pf-hitbox{fill:#3667e40a;stroke:#3667e455;stroke-width:1;stroke-dasharray:3 3;rx:8}
+.pf-flow .pf-zone.tied .pf-fan{stroke-dasharray:3 3}
+.pf-flow .pf-badge{cursor:help}
+.pf-flow .pf-badge rect{fill:#fff;stroke:#dfe6f0}
+.pf-flow .pf-badge.pf-hit rect{stroke:#3667e4;fill:#f5f8ff}
+.pf-flow .pf-b-f{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#607b9f}
+.pf-flow .pf-b-n{font-size:12.5px;font-weight:600;fill:#232e3a}
+.pf-flow .pf-badge[data-cat=attn] rect{border-top:0}.pf-flow .pf-badge[data-cat=attn] .pf-b-n{fill:#3f6a99}.pf-flow .pf-badge[data-cat=mlp] .pf-b-n{fill:#3f7d6a}.pf-flow .pf-badge[data-cat=embed] .pf-b-n{fill:#a9773a}.pf-flow .pf-badge[data-cat=router] .pf-b-n{fill:#8a6bb0}.pf-flow .pf-badge[data-cat=vision] .pf-b-n{fill:#b3664f}
+.pf-pop{position:fixed;z-index:30;max-width:340px;background:#fff;border:1px solid #dbe3ee;border-radius:10px;box-shadow:0 10px 30px #1e324522;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#44546a;pointer-events:none}
+.pf-pop h4{margin:0 0 6px;font-size:13px;color:#232e3a}
+.pf-pop code{display:block;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;color:#3f5f8f;background:#f4f7fc;border-radius:6px;padding:6px 8px}
+.pf-pop p{margin:8px 0 0}.pf-pop .pf-pop-n b{color:#232e3a;font-size:14px}
+.pf-pop-row{margin-top:8px}.pf-pop-row b{display:block;font-size:11px;color:#607b9f;margin-bottom:3px}
+
+.pf-layout{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.pf-custom{margin:22px 0 0;border-top:1px solid var(--line);padding-top:12px}
+.pf-custom summary,.pf-notes summary{cursor:pointer;font-size:13px;color:#55708f}
+.pf-custom .pf-switch{margin-top:14px}
+.pf-notes{margin-top:10px}
+.pf-h3{font-size:18px;font-weight:500;margin:34px 0 10px;color:var(--ink)}
+.pf-prose{max-width:780px;font-size:15px;line-height:1.7;color:#44546a;margin:0 0 12px}.pf-prose b{color:#232e3a}
+.pf-part2{margin-top:64px;padding-top:44px;border-top:1px solid var(--line)}
+.design-prose{max-width:780px;margin-top:8px}
+.design-prose article{padding:16px 0;border-top:1px solid #e7ecf3}
+.design-prose article:first-child{border-top:0}
+.design-prose h3{margin:0 0 6px;font-size:16px;font-weight:500;color:var(--ink)}
+.design-prose p{font-size:14.5px;line-height:1.7;color:#44546a;margin:0 0 8px}
+.design-prose code{display:inline-block;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;color:#3f5f8f;background:#f4f7fc;border-radius:6px;padding:4px 8px;margin:2px 0 6px}
+#pf-table{overflow-x:auto}.pf-side{min-width:0}
+.pf-symbols{display:flex;flex-wrap:wrap;gap:8px 10px;margin:14px 0 14px}
+.pf-symbols span{display:flex;flex-direction:column;gap:1px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:13px ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink);max-width:250px}
+.pf-symbols b{font-weight:700;color:#3667e4}
+.pf-symbols small{font:11.5px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--muted)}
+.pf-pop{max-width:400px}
+.pf-pop-t{border-collapse:collapse;width:100%;margin:2px 0 8px}
+.pf-pop-t th,.pf-pop-t td{padding:5px 8px 5px 0;border-bottom:1px solid #edf1f6;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:left;white-space:nowrap;vertical-align:top;color:#44546a}
+.pf-pop-t th{color:#232e3a;font-weight:600}.pf-pop-t th small{display:block;font:10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#8a9bb1;font-weight:400}
+.pf-pop-t td:last-child{text-align:right;padding-right:0;color:#232e3a;font-weight:600}
+.pf-pop-sum{background:#f4f7fc;border-radius:7px;padding:7px 10px;display:grid;gap:3px}
+.pf-pop-sum div{display:grid;grid-template-columns:1fr auto 86px;gap:10px;align-items:baseline;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;color:#44546a}
+.pf-pop-sum b{color:#232e3a}.pf-pop-sum small{font:10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#8a9bb1}
+.pf-symbols i{font-style:normal}
+.pf-pop .pf-pop-t{width:100%;min-width:0;table-layout:auto;display:table;font-size:12px}
+.pf-pop .pf-pop-t th,.pf-pop .pf-pop-t td{min-width:0;width:auto;letter-spacing:0;background:none;text-transform:none}
+.pw-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:16px 0 12px;font-size:12.5px;color:var(--muted)}
+.pw-controls label{display:flex;flex-direction:row;align-items:center;gap:8px;white-space:nowrap}
+.pw-controls select{border:1px solid var(--line);border-radius:6px;background:#fff;padding:5px 8px;font-size:12px}
+.pw-model b{color:var(--ink)}
+.pf-flow .pf-badge.mix rect{stroke:#cbb9df;stroke-dasharray:3 3}.pf-flow .pf-badge.mix .pf-b-n{fill:#7f58a3}
+.pf-seg.mix{background:repeating-linear-gradient(135deg,#a98bc9 0 6px,#b89ad6 6px 12px)}.pf-dot.mix{background:#a98bc9}
+.pw-legend span{cursor:default}
+.pf-pop-k{font:600 10.5px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:#607b9f;margin:10px 0 4px!important}
+.pf-pop{max-width:430px}
+.pf-part2{--embed:#d1a564;--vision:#c98b78;--norm:#b5c0ce}
+.pf-flow .pf-note{font-size:10.5px;fill:#7c8a9e}
+.pf-flow .pf-projw{fill:#b9d9cb}
+.pf-flow .pf-expert{stroke-dasharray:2 2}
+.pf-flow .pf-wblock{fill:#f6f8fc;stroke:#d5dcea}
+.pf-flow .pf-thru{fill:none;stroke:#93a6d1;stroke-width:1.2}
+
+.pf-note{margin-top:10px;padding:10px 14px;border-left:3px solid #93a6d1;background:#f1f4fb;border-radius:0 8px 8px 0;font-size:.92em}
+
+.pf-symbols em{font-style:normal}

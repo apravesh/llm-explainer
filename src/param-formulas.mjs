@@ -61,3 +61,33 @@ export function compactCount(n) {
  for (const [v, s] of units) if (Math.abs(n) >= v) { const x = n / v; return `${x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2)}${s}`; }
  return String(n);
 }
+
+// Work of one forward pass, in floating-point operations (FLOPs), part by part. A matrix of a × b weights applied to
+// one vector costs about 2·a·b FLOPs (one multiply and one add per weight). Attention's mixing step has no weights:
+// comparing every query with every key, then blending the values, costs about 4·n²·d per block (a causal kernel
+// that skips the masked half needs roughly half of that). mode 'read' processes n tokens at once; mode 'write'
+// adds one token to a context of n tokens whose keys and values are cached.
+export function workFormulas(input = {}, {n = 1024, mode = 'read'} = {}) {
+ const r = parameterFormulas(input), c = r.config, vision = c.model === 'vision', moe = c.model === 'moe', write = mode === 'write' && !vision;
+ const rows = write ? 1 : n, perAttn = 2 * c.d * c.d + 2 * c.d * c.dkv, perMlp = c.mats * c.d * c.f, T = write ? '' : 'n · ';
+ const parts = [];
+ const add = (key, cat, label, formula, flops, note = '') => parts.push({key, cat, label, formula, flops, note});
+ if (vision) add('patch', 'vision', 'Patch embedding', 'n · 2 · 3p²·d', rows * 2 * 3 * c.p * c.p * c.d);
+ else add('embed', 'embed', 'Embedding lookup', 'a lookup', 0, 'Picking a row out of a table is not a multiplication.');
+ add('proj', 'attn', 'Attention · projections', `${T}L · 2 · ${c.kvRatio === 1 ? '4d²' : '(2d² + 2·d·d_kv)'}`, rows * c.L * 2 * perAttn, 'W_Q, W_K, W_V and W_O applied to each token.');
+ add('mix', 'mix', 'Attention · mixing', write ? 'L · 4·n·d' : 'L · 4·n²·d', c.L * 4 * (write ? n : n * n) * c.d, 'Scores and blending. No weights are involved.');
+ if (moe) {
+  add('router', 'router', 'Router', `${T}L · 2 · d·E`, rows * c.L * 2 * c.d * c.E);
+  add('experts', 'mlp', `Experts · ${c.k} of ${c.E} run`, `${T}L · k · 2 · ${c.mats}·d·f`, rows * c.L * c.k * 2 * perMlp);
+ } else add('mlp', 'mlp', 'MLP', `${T}L · 2 · ${c.mats}·d·f`, rows * c.L * 2 * perMlp);
+ if (vision) add('proj-out', 'vision', 'Projector', 'n · 2 · (d·D + D·D)', rows * 2 * (c.d * c.D + c.D * c.D));
+ else add('head', 'embed', 'LM head', '2 · d·V', 2 * c.d * c.V, 'Only the last position is scored when predicting the next token.');
+ const total = parts.reduce((t, x) => t + x.flops, 0);
+ const byCat = {}; for (const x of parts) byCat[x.cat] = (byCat[x.cat] || 0) + x.flops;
+ return {config: c, n, mode: write ? 'write' : 'read', parts, total, byCat, weights: r};
+}
+export function compactWork(n) {
+ if (n === 0) return '0';
+ for (const [v, s] of [[1e18, ' quintillion'], [1e15, ' quadrillion'], [1e12, ' trillion'], [1e9, ' billion'], [1e6, ' million'], [1e3, ' thousand']]) if (n >= v) { const x = n / v; return `${x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2)}${s}`; }
+ return String(Math.round(n));
+}

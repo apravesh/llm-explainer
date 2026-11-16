@@ -180,3 +180,4 @@
 .tl-legend .l-y{width:8px;height:8px;border-radius:50%;background:#2f4566}
 .tl-legend .l-t{width:9px;height:9px;border-radius:50%;border:1.6px solid #d08b70}
 .tl-legend .l-err{width:16px;border-top:1.4px dashed #d08b70}
+#tx-flow .ex-col{fill:#fbfcfe;stroke:#c3cedd;stroke-width:.9;stroke-dasharray:2 2}

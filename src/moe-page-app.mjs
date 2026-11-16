@@ -2,7 +2,7 @@
 // Built to match the text page (src/text-app.mjs) step for step, so the one difference stands out:
 // where the text transformer has one MLP, each token goes through a router, the top-2 of 8 expert MLPs
 // and a weighted sum. Embedding, attention and the output step are drawn as on the text page.
-// The numbers are real arithmetic of a tiny untrained model (src/moe-page-engine.mjs); the list of
+// Sizes are Mixtral 8x7B's; the numbers are real arithmetic of a small untrained stand-in with the same layout (src/moe-page-engine.mjs); the list of
 // next-token guesses is illustrative.
 import {BLOCKS,HEADS,WIDTH,HEAD_DIM,FF,EXPERTS,TOP_K,MIXTRAL,EXAMPLES,run,attentionRaw,attentionStages,layerCost} from './moe-page-engine.mjs';
 
@@ -37,6 +37,7 @@ const curve=(x1,y1,x2,y2)=>{const m=(x1+x2)/2;return `M${x1},${y1} C${m},${y1} $
 const wordLine=(y1,y2,x2)=>`M${978+MS},${y1} C${994+MS},${y1} ${1026+MS},${y2} ${1044+MS},${y2} H${Math.max(1046+MS,x2).toFixed(1)}`;
 const fanArea=(y,top,bot)=>`M${976+MS},${y-9} C${994+MS},${y-9} ${1026+MS},${top} ${1044+MS},${top} V${bot} C${1026+MS},${bot} ${994+MS},${y+9} ${976+MS},${y+9} Z`;
 // Attention as its three stages, exactly as on the text page. Returns the 0..1 shade of one dot, or null where the mask removed it.
+const nf=v=>v.toLocaleString('en-US');
 const STAGE_NAMES=['Dot product','Scaling · Mask','Softmax'];
 function stageShade(m,i,j,r=raw()){
  if(m===2)return j>i?null:attentionStages(r).weights[i][j];
@@ -56,17 +57,17 @@ function routeShade(m,i,e,B=block()){
  const [lo,hi]=scoreRange(B);return (r.scores[e]-lo)/((hi-lo)||1);
 }
 const FORMULAS=[
- `<h4>Dot product</h4><div class="fx">score<sub>i,j</sub> = Q<sub>i</sub> · K<sub>j</sub> = <span class="sum">Σ<sub>d=1</sub><sup>${HEAD_DIM}</sup></span> Q<sub>i,d</sub> × K<sub>j,d</sub></div><p>The Query of token i (the row) is multiplied with the Key of token j (the column), number by number, and the products are added up. Nothing here is specific to MoE. (A head has ${HEAD_DIM} numbers in this page's small model, 64 in GPT-2.)</p>`,
- `<h4>Scaling · Mask</h4><div class="fx">scaled<sub>i,j</sub> = score<sub>i,j</sub> ÷ √${HEAD_DIM} &nbsp;&nbsp;if j ≤ i<br>scaled<sub>i,j</sub> = −∞ &nbsp;&nbsp;if j &gt; i</div><p>Dividing by √${HEAD_DIM} = ${Math.sqrt(HEAD_DIM)} keeps the scores in a range softmax handles well. Tokens that come later (j &gt; i) are masked out, so a token cannot look ahead. The same as in the text transformer.</p>`,
+ `<h4>Dot product</h4><div class="fx">score<sub>i,j</sub> = Q<sub>i</sub> · K<sub>j</sub> = <span class="sum">Σ<sub>d=1</sub><sup>${HEAD_DIM}</sup></span> Q<sub>i,d</sub> × K<sub>j,d</sub></div><p>The Query of token i (the row) is multiplied with the Key of token j (the column), number by number, and the products are added up. Nothing here is specific to MoE. (A head has ${HEAD_DIM} numbers in Mixtral, 64 in GPT-2.)</p>`,
+ `<h4>Scaling · Mask</h4><div class="fx">scaled<sub>i,j</sub> = score<sub>i,j</sub> ÷ √${HEAD_DIM} &nbsp;&nbsp;if j ≤ i<br>scaled<sub>i,j</sub> = −∞ &nbsp;&nbsp;if j &gt; i</div><p>Dividing by √${HEAD_DIM} ≈ ${Math.sqrt(HEAD_DIM).toFixed(1)} keeps the scores in a range softmax handles well. Tokens that come later (j &gt; i) are masked out, so a token cannot look ahead. The same as in the text transformer.</p>`,
  `<h4>Softmax</h4><div class="fx">weight<sub>i,j</sub> = <span class="frac"><span>exp(scaled<sub>i,j</sub>)</span><span><span class="sum">Σ<sub>k</sub></span> exp(scaled<sub>i,k</sub>)</span></span></div><p>Each row is turned into weights that add up to 1, and −∞ becomes 0.</p>`,
  `<h4>Out</h4><div class="fx">out<sub>i</sub> = <span class="sum">Σ<sub>j</sub></span> weight<sub>i,j</sub> × V<sub>j</sub></div><p>Each token's output is a blend of the Value vectors, mixed by its row of attention weights. Attention is shared by all experts: it runs once, before the router.</p>`,
  `<h4>MoE layer</h4><div class="fx">MoE(x) = <span class="sum">Σ<sub>e ∈ top-${TOP_K}</sub></span> g<sub>e</sub> · Expert<sub>e</sub>(x)</div><p>This replaces the single MLP of the text transformer. A router scores the ${EXPERTS} experts for this token, only the ${TOP_K} best run, and their outputs are added with weights g that sum to 1. Click to open it step by step.</p>`,
- `<h4>Router scores</h4><div class="fx">s = W<sub>r</sub> · x<br>W<sub>r</sub> : matrix(${EXPERTS} × ${WIDTH})</div><p>x is the token's vector after attention. The router is one small learned matrix with a row per expert, so the result is ${EXPERTS} scores: how well each expert suits this token. No expert has run yet.</p>`,
+ `<h4>Router scores</h4><div class="fx">s = W<sub>r</sub> · x<br>W<sub>r</sub> : matrix(${EXPERTS} × ${nf(WIDTH)})</div><p>x is the token's vector after attention. The router is one small learned matrix with a row per expert, so the result is ${EXPERTS} scores: how well each expert suits this token. No expert has run yet.</p>`,
  `<h4>Top-${TOP_K}</h4><div class="fx">keep the ${TOP_K} highest scores<br>all others → −∞</div><p>Only the ${TOP_K} best-scoring experts stay. The other ${EXPERTS-TOP_K} are not run at all for this token: their weights are stored but do no work. It is the top-k filter from the last step of the text transformer, applied to experts instead of words.</p>`,
  `<h4>Softmax over the chosen</h4><div class="fx">g<sub>e</sub> = <span class="frac"><span>exp(s<sub>e</sub>)</span><span><span class="sum">Σ<sub>c ∈ chosen</sub></span> exp(s<sub>c</sub>)</span></span></div><p>The ${TOP_K} surviving scores are turned into weights that add up to 1. A dropped expert (−∞) gets exactly 0.</p>`,
- `<h4>Experts run</h4><div class="fx">y<sub>e</sub> = W<sub>2,e</sub> · GELU(W<sub>1,e</sub> · x)</div><p>Each chosen expert is an ordinary MLP, the same shape as the one in the text transformer (here ${WIDTH} → ${FF} → ${WIDTH}), with its own weights. Both receive the whole vector x, not a piece of it.</p>`,
- `<h4>Weighted sum</h4><div class="fx">y = <span class="sum">Σ<sub>e ∈ chosen</sub></span> g<sub>e</sub> · y<sub>e</sub><br>output = x + y</div><p>Each expert's output is multiplied by its weight and the results are added, number by number: ${WIDTH} numbers again, not two vectors side by side. The sum is added to the vector that came in (the residual connection).</p>`,
- `<h4>Output projection</h4><div class="fx">logits = W<sub>out</sub> · h<sub>last</sub></div><p>Unchanged from the text transformer: the last token's final vector is multiplied by the vocabulary matrix and softmax turns the scores into probabilities. This page's model is untrained, so the list on the right is illustrative.</p>`
+ `<h4>Experts run</h4><div class="fx">y<sub>e</sub> = W<sub>2,e</sub> · ( SiLU(W<sub>1,e</sub> · x) ⊙ W<sub>3,e</sub> · x )</div><p>Each chosen expert is a complete MLP with its own weights: ${nf(WIDTH)} → ${nf(FF)} → ${nf(WIDTH)}. In Mixtral it is the gated kind, with three matrices, as on the Vision page. Both chosen experts receive the whole vector x, not a piece of it.</p>`,
+ `<h4>Weighted sum</h4><div class="fx">y = <span class="sum">Σ<sub>e ∈ chosen</sub></span> g<sub>e</sub> · y<sub>e</sub><br>output = x + y</div><p>Each expert's output is multiplied by its weight and the results are added, number by number: ${nf(WIDTH)} numbers again, not two vectors side by side. The sum is added to the vector that came in (the residual connection).</p>`,
+ `<h4>Output projection</h4><div class="fx">logits = W<sub>out</sub> · h<sub>last</sub></div><p>Unchanged from the text transformer: the last token's final vector is multiplied by the vocabulary matrix and softmax turns the scores into probabilities. No model is run for this list; it is illustrative.</p>`
 ];
 const blocksLeft=()=>BLOCKS-1-state.block;
 function paintMore(root=$('#tx-flow')){
@@ -84,21 +85,26 @@ function moeRows(opening=false){
  let s='';
  if(!EM){
   s+=heads(xc,Y0+9);
+  // One router and one pool of experts. They are drawn once: every token is scored by the same router and
+  // sent to its own two of the same eight experts.
+  const pt=yc(0)-15,pb=yc(n-1)+15;
+  s+=`<rect class="rt" data-dim="one router W_r, the same for every token · matrix(${EXPERTS} × ${nf(WIDTH)})" x="826" y="${pt}" width="14" height="${pb-pt}" rx="4"/><text class="rt-t" x="833" y="${(pt+pb)/2+3}" text-anchor="middle">R</text>`;
+  for(let e=0;e<EXPERTS;e++)s+=`<rect class="ex-col" data-dim="expert ${e+1} · one MLP, the same weights for every token" x="${xe(e)-1.5}" y="${pt}" width="${ES+3}" height="${pb-pt}" rx="4"/>`;
   tokens.forEach((t,i)=>{
    const y=yc(i),r=B.routes[i],[a,b]=r.chosen;
-   s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="vector(${WIDTH})" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
-   s+=`<path class="fr" d="M816,${y}H826"/><rect class="rt" data-dim="router W_r · matrix(${EXPERTS} × ${WIDTH}): one score per expert" x="826" y="${y-7}" width="14" height="14" rx="3"/><text class="rt-t" x="833" y="${y+3.2}" text-anchor="middle">R</text>`;
+   s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="hidden state of “${esc(t)}” after attention · vector(${nf(WIDTH)})" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
+   s+=`<path class="fr" d="M816,${y}H826"/>`;
    s+=`<path class="fr" d="M840,${y-4}C847,${y-4} 845,${y-11} 852,${y-11}H${xc(b)}V${y-6.5}M${xc(a)},${y-11}V${y-6.5}"/>`;
    for(let e=0;e<EXPERTS;e++){
     const on=r.chosen.includes(e);
-    s+=`<rect class="ex ${on?'run':'idle'}" data-e="${e}" data-dim="${on?`expert ${e+1} runs for “${esc(t)}” · weight ${pct(r.gates[e])}`:`expert ${e+1} · idle for “${esc(t)}”`}" x="${xe(e)}" y="${y-ES/2}" width="${ES}" height="${ES}" rx="2.5"${on?` fill-opacity="${(0.4+0.6*r.gates[e]).toFixed(2)}"`:''}/>`;
+    if(on)s+=`<rect class="ex run" data-e="${e}" data-dim="expert ${e+1} runs for “${esc(t)}” · weight ${pct(r.gates[e])}" x="${xe(e)}" y="${y-ES/2}" width="${ES}" height="${ES}" rx="2.5" fill-opacity="${(0.4+0.6*r.gates[e]).toFixed(2)}"/>`;
     if(on)s+=`<text class="ex-n" x="${xc(e)}" y="${y+2.6}" text-anchor="middle">${e+1}</text>`;
    }
    s+=`<path class="fx" d="M${xc(a)},${y+6.5}V${y+11}H974C981,${y+11} 979,${y} 986,${y}M${xc(b)},${y+6.5}V${y+11}"/><circle class="sg" data-dim="${r.chosen.map(e=>`${pct(r.gates[e])} × expert ${e+1}`).join(' + ')}" cx="993" cy="${y}" r="7"/><text class="sg-t" x="993" y="${y+3.6}" text-anchor="middle">Σ</text>`;
-   s+=`<path class="fx" d="M1000,${y}H1006"/><rect data-dim="vector(${WIDTH})" x="${902+MS}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
+   s+=`<path class="fx" d="M1000,${y}H1006"/><rect data-dim="hidden state of “${esc(t)}” after the MoE layer · vector(${nf(WIDTH)})" x="${902+MS}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
   });
   const dy=yc(n-1)+38;
-  s+=`<text class="mlp-size" x="811" y="${dy}" text-anchor="middle">${WIDTH}</text><text class="mlp-size" x="${(xe(0)+xe(EXPERTS-1)+ES)/2}" y="${dy}" text-anchor="middle">${TOP_K} of ${EXPERTS} experts run</text><text class="mlp-size" x="${907+MS}" y="${dy}" text-anchor="middle">${WIDTH}</text>`;
+  s+=`<text class="mlp-size" x="811" y="${dy}" text-anchor="middle">${nf(WIDTH)}</text><text class="mlp-size" x="${(xe(0)+xe(EXPERTS-1)+ES)/2}" y="${dy}" text-anchor="middle">${TOP_K} of ${EXPERTS} experts run</text><text class="mlp-size" x="${907+MS}" y="${dy}" text-anchor="middle">${nf(WIDTH)}</text>`;
   return s;
  }
  const AT=[300,1100,1900,2700,3500],[lo,hi]=scoreRange(B),mid=k=>mE(k)+MW/2-TP/2,dy=yc(n-1)+38;
@@ -117,16 +123,16 @@ function moeRows(opening=false){
  }
  tokens.forEach((t,i)=>{
   const y=yc(i),r=B.routes[i],st=i*40;
-  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><text class="mini" x="816" y="${y-20}" text-anchor="end">${esc(t)}</text><rect data-dim="vector(${WIDTH})" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/></g>`;
-  s+=`<g class="${late(AT[0]+st).trim()}"><path class="fr" d="M816,${y}H826"/><rect class="wbox" data-dim="router W_r · matrix(${EXPERTS} × ${WIDTH}), the same for every token" x="826" y="${y-10}" width="28" height="20" rx="4"/><text class="wbox-t" x="840" y="${y+4}" text-anchor="middle">W<tspan baseline-shift="sub" font-size="7">r</tspan></text><path class="emb-arrow" d="M857,${y}H872m-5,-4l5,4l-5,4"/></g>`;
+  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><text class="mini" x="816" y="${y-20}" text-anchor="end">${esc(t)}</text><rect data-dim="hidden state of “${esc(t)}” after attention · vector(${nf(WIDTH)})" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/></g>`;
+  s+=`<g class="${late(AT[0]+st).trim()}"><path class="fr" d="M816,${y}H826"/><rect class="wbox" data-dim="router W_r · matrix(${EXPERTS} × ${nf(WIDTH)}), the same for every token" x="826" y="${y-10}" width="28" height="20" rx="4"/><text class="wbox-t" x="840" y="${y+4}" text-anchor="middle">W<tspan baseline-shift="sub" font-size="7">r</tspan></text><path class="emb-arrow" d="M857,${y}H872m-5,-4l5,4l-5,4"/></g>`;
   r.chosen.forEach((e,c)=>{
    const yy=y+(c?13:-13),g=r.gates[e];
-   s+=`<g class="${late(AT[3]+st).trim()}"><text class="ex-name" x="1326" y="${yy+3.5}" text-anchor="end">E${e+1}</text><path class="band" style="fill:#d3dcee" d="M1330,${yy-6} L1346,${yy-11} V${yy+11} L1330,${yy+6} Z"/><rect data-dim="expert ${e+1} · GELU(W₁ · x) · vector(${FF})" x="1346" y="${yy-11}" width="12" height="22" rx="2.5" fill="#6681b5" opacity=".8"/><path class="band" style="fill:#d3dcee" d="M1358,${yy-11} L1372,${yy-6} V${yy+6} L1358,${yy+11} Z"/><rect data-dim="output of expert ${e+1} · vector(${WIDTH})" x="1372" y="${yy-6}" width="8" height="12" rx="2" fill="#a9c0f3"/></g>`;
+   s+=`<g class="${late(AT[3]+st).trim()}"><text class="ex-name" x="1326" y="${yy+3.5}" text-anchor="end">E${e+1}</text><path class="band" style="fill:#d3dcee" d="M1330,${yy-6} L1346,${yy-11} V${yy+11} L1330,${yy+6} Z"/><rect data-dim="expert ${e+1} · SiLU(W₁ · x) ⊙ W₃ · x · vector(${nf(FF)})" x="1346" y="${yy-11}" width="12" height="22" rx="2.5" fill="#6681b5" opacity=".8"/><path class="band" style="fill:#d3dcee" d="M1358,${yy-11} L1372,${yy-6} V${yy+6} L1358,${yy+11} Z"/><rect data-dim="output of expert ${e+1} · vector(${nf(WIDTH)})" x="1372" y="${yy-6}" width="8" height="12" rx="2" fill="#a9c0f3"/></g>`;
    s+=`<g class="${late(AT[4]+st).trim()}"><text class="gate" x="1386" y="${yy+3.5}">× ${g.toFixed(2)}</text><path class="fx" d="M1424,${yy}C1434,${yy} 1432,${y} 1439,${y}"/></g>`;
   });
-  s+=`<g class="${late(AT[4]+st).trim()}"><circle class="sg" data-dim="${r.chosen.map(e=>`${r.gates[e].toFixed(2)} × expert ${e+1}`).join(' + ')}" cx="1446" cy="${y}" r="7"/><text class="sg-t" x="1446" y="${y+3.6}" text-anchor="middle">Σ</text><path class="fx" d="M1453,${y}H${XO}"/><rect data-dim="vector(${WIDTH})" x="${XO}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
+  s+=`<g class="${late(AT[4]+st).trim()}"><circle class="sg" data-dim="${r.chosen.map(e=>`${r.gates[e].toFixed(2)} × expert ${e+1}`).join(' + ')}" cx="1446" cy="${y}" r="7"/><text class="sg-t" x="1446" y="${y+3.6}" text-anchor="middle">Σ</text><path class="fx" d="M1453,${y}H${XO}"/><rect data-dim="hidden state of “${esc(t)}” after the MoE layer · vector(${nf(WIDTH)})" x="${XO}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
  });
- s+=`<text class="mlp-size" x="811" y="${dy}" text-anchor="middle">${WIDTH}</text><text class="mlp-size${late(AT[3])}" x="1352" y="${dy}" text-anchor="middle">${FF}</text><text class="mlp-size${late(AT[3])}" x="1376" y="${dy}" text-anchor="middle">${WIDTH}</text><text class="mlp-size${late(AT[4])}" x="${XO+5}" y="${dy}" text-anchor="middle">${WIDTH}</text>`;
+ s+=`<text class="mlp-size" x="811" y="${dy}" text-anchor="middle">${nf(WIDTH)}</text><text class="mlp-size${late(AT[3])}" x="1352" y="${dy}" text-anchor="middle">${nf(FF)}</text><text class="mlp-size${late(AT[3])}" x="1376" y="${dy}" text-anchor="middle">${nf(WIDTH)}</text><text class="mlp-size${late(AT[4])}" x="${XO+5}" y="${dy}" text-anchor="middle">${nf(WIDTH)}</text>`;
  return s;
 }
 function flow(){
@@ -145,16 +151,15 @@ function flow(){
  // the opened MoE layer is wide: the whole picture moves left to keep it in view
  s+=`<g transform="translate(${-rs})"><g class="${anim?'slide':''}" style="--from:${anim?rs-prev.rs:0}px">`;
  s+=`<g class="stage${dimSide}" style="--d:0"><text class="col-title" x="20" y="30">Embedding</text>`;
- tokens.forEach((t,i)=>{s+=`<text data-t="${i}" class="tok" x="120" y="${yc(i)+4}" text-anchor="end">${esc(t)}</text><rect data-t="${i}" data-dim="vector(${WIDTH})" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
+ tokens.forEach((t,i)=>{s+=`<text data-t="${i}" class="tok" x="120" y="${yc(i)+4}" text-anchor="end">${esc(t)}</text><rect data-t="${i}" data-dim="hidden state of “${esc(t)}” going into the block · vector(${nf(WIDTH)})" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
  s+=`</g>`;
  s+=`<g class="stage" style="--d:1"><rect class="frame${anim?' widen':''}" style="--sx:${anim?((fw+prev.dA+prev.dM)/(fw+dA+dM)).toFixed(4):1}" x="${fx}" y="${fy}" width="${fw+dA+dM}" height="${fh}" rx="10"/>${chip('block',fx+18,fy,blockLabel(),176)}</g>`;
  s+=`<g class="stage block-part${dimSide}" style="--d:1">`;
- tokens.forEach((t,i)=>{
-  const y=yc(i);
-  [['q',-12],['k',0],['v',12]].forEach(([g,dy])=>{
-   s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,232,y+dy)}" stroke-width="1.2"/><rect class="${g}" data-dim="${qkv[g]} weights · matrix(${WIDTH} × ${WIDTH})" x="232" y="${y+dy-4.5}" width="9" height="9" rx="1.5" opacity=".75"/><text class="mini" x="246" y="${y+dy+3}">${g.toUpperCase()}</text></g>`;
-  });
- });
+ // One set of Query, Key and Value matrices. Every token's vector goes through the same three and comes out as its own q, k and v.
+ const cy=(yc(0)+yc(n-1))/2,sq=i=>cy+(yc(i)-cy)*0.5,qt=sq(0)-14,qb=sq(n-1)+14;
+ s+=`<rect class="wblock" x="227" y="${qt}" width="26" height="${qb-qt}" rx="6"/>`;
+ [['q',230],['k',237.5],['v',245]].forEach(([g,x])=>{s+=`<rect class="${g} wstripe" data-dim="${qkv[g]} weights · matrix(${nf(WIDTH)} × ${nf(WIDTH)}) · the same for every token" x="${x}" y="${qt+3}" width="5" height="${qb-qt-6}" rx="2.5" opacity=".7"/><text class="mini" x="${x+2.5}" y="${qt-5}" text-anchor="middle">${g.toUpperCase()}</text>`;});
+ tokens.forEach((t,i)=>{const y=yc(i);s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,227,sq(i))}" stroke-width="1.2"/>${[['q',-6.5],['k',0],['v',6.5]].map(([g,dy])=>`<circle class="${g}" cx="256" cy="${sq(i)+dy}" r="2"/>`).join('')}</g>`;});
  s+=`</g>`;
  // ----- head card: identical to the text page
  s+=`<g class="stage head-part${dimBlock}" style="--d:2" data-zone="attention">`;
@@ -163,8 +168,8 @@ function flow(){
  for(const g of ['k','q','v']){
   s+=`<text class="lbl-${g}" x="452" y="${ty(g,0)-12}">${qkv[g]}</text>`;
   tokens.forEach((t,i)=>{
-   const y=ty(g,i),dy=g==='q'?-12:g==='k'?0:12;
-   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(254,yc(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(t)}</text><rect class="${g}" data-dim="${qkv[g]}, this head · vector(${HEAD_DIM})" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${qkv[g]}, this head · vector(${HEAD_DIM})" x="450" y="${y-5}" width="16" height="10"/></g>`;
+   const y=ty(g,i),dy=g==='q'?-6.5:g==='k'?0:6.5;
+   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(258,sq(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(t)}</text><rect class="${g}" data-dim="${qkv[g]} of “${esc(t)}”, this head · vector(${HEAD_DIM})" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${qkv[g]} of “${esc(t)}”, this head · vector(${HEAD_DIM})" x="450" y="${y-5}" width="16" height="10"/></g>`;
   });
  }
  s+=`</g><g class="stage head-part${dimBlock}" style="--d:3" data-zone="attention">`;
@@ -195,7 +200,7 @@ function flow(){
  s+=`<g class="${anim?'slide':''}" style="--from:${from}px"><path class="band${opening?' late':''}" style="--at:${T3}ms;fill:#e6dcf0" d="M${mr},${ty('q',0)-6} L${outX},${ty('q',0)-2} V${ty('q',n-1)+2} L${mr},${ty('q',n-1)+6} Z"/>`;
  s+=`<g class="stage-name out-name" data-formula="3" tabindex="0" role="button" aria-label="Out: show the formula"><rect x="${outX-13}" y="${ty('q',0)-27}" width="40" height="19" rx="9"/><text x="${outX+7}" y="${ty('q',0)-14}" text-anchor="middle">Out</text></g>`;
  tokens.forEach((t,i)=>{
-  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="Out, this head · vector(${HEAD_DIM})" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
+  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="attention output of “${esc(t)}”, this head · vector(${HEAD_DIM})" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
  });
  s+=`</g></g>`;
  s+=`<g class="stage${dimBlock}" style="--d:2">${chip('head',346,top,headLabel(),282)}</g>`;
@@ -209,7 +214,7 @@ function flow(){
  tokens.forEach((t,i)=>{
   const y=yc(i);
   s+=`<g data-t="${i}"><path class="fg" d="M${912+MS},${y} H${944+MS}" stroke-width="1.2"/>`;
-  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="vector(${WIDTH})" x="${944+MS+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
+  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="hidden state of “${esc(t)}” after a later block · vector(${nf(WIDTH)})" x="${944+MS+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
   s+=`</g>`;
  });
  s+=`</g>`;
@@ -261,13 +266,13 @@ function whoResult(i=null){
 
 /* ---------- 04 stored vs used ---------- */
 function cost(){
- const c=layerCost(),fmt=v=>v.toLocaleString('en-US'),bn=v=>(v/1e9).toFixed(1)+' billion';
+ const c=layerCost(),fmt=v=>v>=1e9?`${(v/1e9).toFixed(2)} billion`:v>=1e6?`${Math.round(v/1e6)} million`:v.toLocaleString('en-US'),bn=v=>(v/1e9).toFixed(1)+' billion';
  const pool=on=>`<span class="mx-pool"><i class="r" title="router"></i>${Array.from({length:EXPERTS},(_,e)=>`<i class="${e<on?'e':'e off'}"></i>`).join('')}</span>`;
  const share=MIXTRAL.active/MIXTRAL.stored;
- $('#cost-comparison').innerHTML=`<div class="mx-cost-col"><p class="string-label">ONE MoE LAYER OF THIS PAGE'S MODEL</p>
+ $('#cost-comparison').innerHTML=`<div class="mx-cost-col"><p class="string-label">ONE MoE LAYER OF ${MIXTRAL.name.toUpperCase()}</p>
 <div class="mx-cost-row"><span>Stored</span>${pool(EXPERTS)}<strong>${fmt(c.stored)}</strong></div>
 <div class="mx-cost-row"><span>Used per token</span>${pool(TOP_K)}<strong>${fmt(c.active)}</strong></div>
-<p class="vec-note">Router ${fmt(c.router)} weights (${EXPERTS} × ${WIDTH}) + ${EXPERTS} experts of ${fmt(c.expert)} each (${WIDTH} × ${FF}, twice). A token uses the router and ${TOP_K} experts: ${fmt(c.router)} + ${TOP_K} × ${fmt(c.expert)} = ${fmt(c.active)}. One ordinary MLP of the same shape would store and use ${fmt(c.dense)}.</p></div>
+<p class="vec-note">Router ${fmt(c.router)} weights (${EXPERTS} × ${nf(WIDTH)}) + ${EXPERTS} experts of ${fmt(c.expert)} each (three matrices of ${nf(FF)} × ${nf(WIDTH)}). A token uses the router and ${TOP_K} experts: ${TOP_K} × ${fmt(c.expert)} = ${fmt(c.active)}. One ordinary gated MLP of the same shape would store and use ${fmt(c.dense)}.</p></div>
 <div class="mx-cost-col"><p class="string-label">A REAL MODEL · ${MIXTRAL.name.toUpperCase()}, ALL ${MIXTRAL.blocks} BLOCKS</p>
 <div class="mx-cost-row"><span>Stored</span><span class="mx-share"><i style="width:100%"></i></span><strong>${bn(MIXTRAL.stored)}</strong></div>
 <div class="mx-cost-row"><span>Used per token</span><span class="mx-share"><i style="width:${(share*100).toFixed(1)}%"></i></span><strong>${bn(MIXTRAL.active)}</strong></div>
@@ -340,7 +345,7 @@ function init(){
   const cell=e.target.closest('.cell');
   if(cell){
    const i=+cell.dataset.q,j=+cell.dataset.k,{tokens}=data(),w=attentionStages(raw()).weights[i][j];
-   $('#tx-result').textContent=j>i?`“${tokens[i]}” cannot look ahead at “${tokens[j]}”: masked, as in any text transformer.`:`“${tokens[i]}” gives ${pct(w)} of its attention to “${tokens[j]}” in block ${state.block+1}, head ${state.head+1} (an untrained model: the pattern has no meaning).`;
+   $('#tx-result').textContent=j>i?`“${tokens[i]}” cannot look ahead at “${tokens[j]}”: masked, as in any text transformer.`:`“${tokens[i]}” gives ${pct(w)} of its attention to “${tokens[j]}” in block ${state.block+1}, head ${state.head+1} (from an untrained stand-in model, so the pattern has no meaning).`;
   }
  });
  const tip=$('#tx-tip'),formula=$('#tx-formula');

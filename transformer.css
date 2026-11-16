@@ -341,3 +341,8 @@
 #tx-flow .actual .ac{fill:none;stroke:#7f58a3;stroke-width:2.6}
 #tx-flow .actual-tag{font:8.5px var(--mono);letter-spacing:.08em;fill:#9a7fb8}
 #tx-flow .actual[hidden],#tx-flow .actual-mark[hidden]{display:none}
+/* weights that exist once are drawn once: one Q/K/V block and one MLP that every token passes through */
+#tx-flow .wblock{fill:#f6f8fc;stroke:#d5dcea;stroke-width:1}
+#tx-flow .wstripe{cursor:help}
+#tx-flow .thru{stroke:#93a6d1;stroke-opacity:1}
+#tx-flow.tracing .thru.on,#tx-flow.tracing .on .thru{stroke:#5b78c7;stroke-opacity:1}

@@ -131,14 +131,13 @@ function flow(){
  s+=`<g transform="translate(${dE})"><g class="${anim?'slide':''}" style="--from:${fromE}px">`;
  s+=`<g class="stage${dimFrame}" style="--d:1"><rect class="frame${anim?' widen':''}" style="--sx:${anim?((fw+prev.dA+prev.dM)/(fw+dA+dM)).toFixed(4):1}" x="${fx}" y="${fy}" width="${fw+dA+dM}" height="${fh}" rx="10"/>${chip('block',fx+18,fy,blockLabel(),176)}</g>`;
  s+=`<g class="stage${dimEmb}" style="--d:0" data-zone="embedding">`;
- tokens.forEach((t,i)=>{s+=`<rect data-t="${i}" data-dim="vector(768)" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
+ tokens.forEach((t,i)=>{s+=`<rect data-t="${i}" data-dim="hidden state of “${esc(showToken(t))}” going into the block · vector(768)" x="130" y="${yc(i)-15}" width="12" height="30" rx="2" fill="#cdd6e2"/>`;});
  s+=`</g><g class="stage block-part${dimSide}" style="--d:1">`;
- tokens.forEach((t,i)=>{
-  const y=yc(i);
-  [['q',-12],['k',0],['v',12]].forEach(([g,dy])=>{
-   s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,232,y+dy)}" stroke-width="1.2"/><rect class="${g}" data-dim="${names[g]} weights · matrix(768 × 768)" x="232" y="${y+dy-4.5}" width="9" height="9" rx="1.5" opacity=".75"/><text class="mini" x="246" y="${y+dy+3}">${g.toUpperCase()}</text></g>`;
-  });
- });
+ // One set of Query, Key and Value matrices. Every token's vector goes through the same three and comes out as its own q, k and v.
+ const cy=(yc(0)+yc(n-1))/2,sq=i=>cy+(yc(i)-cy)*0.5,qt=sq(0)-14,qb=sq(n-1)+14;   // squeezed rows inside the shared blocks
+ s+=`<rect class="wblock" x="227" y="${qt}" width="26" height="${qb-qt}" rx="6"/>`;
+ [['q',230],['k',237.5],['v',245]].forEach(([g,x])=>{s+=`<rect class="${g} wstripe" data-dim="${names[g]} weights · matrix(768 × 768) · the same for every token" x="${x}" y="${qt+3}" width="5" height="${qb-qt-6}" rx="2.5" opacity=".7"/><text class="mini" x="${x+2.5}" y="${qt-5}" text-anchor="middle">${g.toUpperCase()}</text>`;});
+ tokens.forEach((t,i)=>{const y=yc(i);s+=`<g data-t="${i}"><path class="fg" d="${curve(142,y,227,sq(i))}" stroke-width="1.2"/>${[['q',-6.5],['k',0],['v',6.5]].map(([g,dy])=>`<circle class="${g}" cx="256" cy="${sq(i)+dy}" r="2"/>`).join('')}</g>`;});
  s+=`</g>`;
  // head card with a stack behind it
  s+=`<g class="stage head-part${dimBlock}" style="--d:2" data-zone="attention">`;
@@ -147,8 +146,8 @@ function flow(){
  for(const g of ['k','q','v']){
   s+=`<text class="lbl-${g}" x="452" y="${ty(g,0)-12}">${names[g]}</text>`;
   tokens.forEach((t,i)=>{
-   const y=ty(g,i),dy=g==='q'?-12:g==='k'?0:12;
-   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(254,yc(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(showToken(t))}</text><rect class="${g}" data-dim="${names[g]}, this head · vector(64)" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${names[g]}, this head · vector(64)" x="450" y="${y-5}" width="16" height="10"/></g>`;
+   const y=ty(g,i),dy=g==='q'?-6.5:g==='k'?0:6.5;
+   s+=`<g data-t="${i}"><path class="f${g}" d="${curve(258,sq(i)+dy,380,y)}" stroke-width="1" opacity=".55"/><text class="mini" x="446" y="${y+3}" text-anchor="end">${esc(showToken(t))}</text><rect class="${g}" data-dim="${names[g]} of “${esc(showToken(t))}”, this head · vector(64)" x="452" y="${y-1.5}" width="12" height="3" rx="1"/><rect class="hit" data-dim="${names[g]} of “${esc(showToken(t))}”, this head · vector(64)" x="450" y="${y-5}" width="16" height="10"/></g>`;
   });
  }
  s+=`</g><g class="stage head-part${dimBlock}" style="--d:3" data-zone="attention">`;
@@ -184,7 +183,7 @@ function flow(){
  s+=`<g class="${anim?'slide':''}" style="--from:${from}px"><path class="band${opening?' late':''}" style="--at:${T3}ms;fill:#e6dcf0" d="M${mr},${ty('q',0)-6} L${outX},${ty('q',0)-2} V${ty('q',n-1)+2} L${mr},${ty('q',n-1)+6} Z"/>`;
  s+=`<g class="stage-name out-name" data-formula="3" tabindex="0" role="button" aria-label="Out: show the formula"><rect x="${outX-13}" y="${ty('q',0)-27}" width="40" height="19" rx="9"/><text x="${outX+7}" y="${ty('q',0)-14}" text-anchor="middle">Out</text></g>`;
  tokens.forEach((t,i)=>{
-  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="Out, this head · vector(64)" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
+  s+=`<g data-t="${i}">${E?`<path class="fv${opening?' late':''}" style="--at:${T3}ms" d="M464,${ty('v',i)} H${outX-74} C${outX-30},${ty('v',i)} ${outX-44},${ty('q',i)} ${outX},${ty('q',i)}" stroke-width="1" opacity=".45"/>`:`<path class="fv" d="${curve(464,ty('v',i),outX,ty('q',i))}" stroke-width="1" opacity=".4"/>`}<rect class="o" x="${outX}" y="${ty('q',i)-1.5}" width="14" height="3" rx="1"/><rect class="hit" data-dim="attention output of “${esc(showToken(t))}”, this head · vector(64)" x="${outX-2}" y="${ty('q',i)-5}" width="18" height="10"/></g>`;
  });
  s+=`</g></g>`;
  // MLP and the remaining blocks
@@ -194,15 +193,17 @@ function flow(){
  const x2=EM?1010:846,xo=902+dM,mpill=(k,x,w,label,at)=>`<g class="stage-name${late(openM,at)}" data-formula="${k}" tabindex="0" role="button" aria-label="${label}: show the formula"><rect x="${x-w/2}" y="${fy+40}" width="${w}" height="19" rx="9"/><text x="${x}" y="${fy+53}" text-anchor="middle">${label}</text></g>`;
  s+=`<g class="${dimMlp}" data-zone="mlp"><g class="stage" style="--d:4"><g class="stage-name mlp-name" data-formula="4" tabindex="0" role="button" aria-label="MLP: show the formula"><rect x="${806-9}" y="${fy+21}" width="42" height="19" rx="9"/><text x="${806+12}" y="${fy+34}" text-anchor="middle">MLP</text></g>${EM?mpill(13,858,56,'Linear',300)+mpill(14,968,50,'GELU',900)+mpill(15,1078,56,'Linear',1500):''}</g>`;
  s+=`<g class="stage block-part" style="--d:4">`;
+ // One MLP. Its weights are shared: every token's vector goes through the same matrices and comes out changed in its own way.
+ if(!EM){const mt=sq(0)-22,mb=sq(n-1)+22;s+=`<path class="band" style="fill:#d3dcee" d="M828,${mt+12} L846,${mt} V${mb} L828,${mb-12} Z"/><rect class="mlp-one" data-dim="MLP layer: W_in (expansion, 768 → 3,072) and W_out (contraction, 3,072 → 768) · the same weights for every token" x="846" y="${mt}" width="26" height="${mb-mt}" rx="4" fill="#b3c2e0"/><path class="band" style="fill:#d3dcee" d="M872,${mt} L890,${mt+12} V${mb-12} L872,${mb} Z"/>`;}
  tokens.forEach((t,i)=>{
   const y=yc(i),lit=illustrativeVector(7000+i,5);
-  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="vector(768)" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
+  s+=`<g data-t="${i}"><path class="fo" d="${curve(716+14,ty('q',i),806,y)}" stroke-width="1.2" opacity=".7"/><rect data-dim="hidden state of “${esc(showToken(t))}” after attention · vector(768)" x="806" y="${y-15}" width="10" height="30" rx="2" fill="#d0bfe1"/>`;
   if(EM){
-   s+=`<g class="${late(openM,300+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M816,${y-15} L900,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="vector(3072)" x="900" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/></g>`;
-   s+=`<g class="${late(openM,900+i*50).trim()}"><path class="emb-arrow" d="M930,${y}H1004m-5,-4l5,4l-5,4"/><rect data-dim="vector(3072)" x="1010" y="${y-22}" width="26" height="44" rx="3" fill="#d3dcee"/>${lit.map((v,k)=>v>0?`<rect x="1010" y="${(y-22+k*8.8).toFixed(1)}" width="26" height="8.8" fill="#6681b5" opacity="${(0.35+0.6*v).toFixed(2)}" style="pointer-events:none"/>`:'').join('')}</g>`;
-   s+=`<g class="${late(openM,1500+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M1036,${y-22} L${xo},${y-15} V${y+15} L1036,${y+22} Z"/><rect data-dim="vector(768)" x="${xo}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
+   s+=`<g class="${late(openM,300+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M816,${y-15} L900,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="“${esc(showToken(t))}” widened by W_in · vector(3072)" x="900" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/></g>`;
+   s+=`<g class="${late(openM,900+i*50).trim()}"><path class="emb-arrow" d="M930,${y}H1004m-5,-4l5,4l-5,4"/><rect data-dim="“${esc(showToken(t))}” after GELU · vector(3072)" x="1010" y="${y-22}" width="26" height="44" rx="3" fill="#d3dcee"/>${lit.map((v,k)=>v>0?`<rect x="1010" y="${(y-22+k*8.8).toFixed(1)}" width="26" height="8.8" fill="#6681b5" opacity="${(0.35+0.6*v).toFixed(2)}" style="pointer-events:none"/>`:'').join('')}</g>`;
+   s+=`<g class="${late(openM,1500+i*50).trim()}"><path class="band" style="fill:#d3dcee" d="M1036,${y-22} L${xo},${y-15} V${y+15} L1036,${y+22} Z"/><rect data-dim="hidden state of “${esc(showToken(t))}” after the MLP · vector(768)" x="${xo}" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/></g>`;
   }else{
-   s+=`<path class="band" style="fill:#d3dcee" d="M816,${y-15} L846,${y-22} V${y+22} L816,${y+15} Z"/><rect data-dim="vector(3072)" x="846" y="${y-22}" width="26" height="44" rx="3" fill="#b3c2e0"/><path class="band" style="fill:#d3dcee" d="M872,${y-22} L902,${y-15} V${y+15} L872,${y+22} Z"/><rect data-dim="vector(768)" x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
+   s+=`<path class="fg thru" d="${curve(816,y,830,sq(i))} H888 ${curve(888,sq(i),902,y).replace('M888,'+sq(i),'')}" stroke-width="1.2"/><rect data-dim="hidden state of “${esc(showToken(t))}” after the MLP · vector(768)" x="902" y="${y-15}" width="10" height="30" rx="2" fill="#a9c0f3"/>`;
   }
   s+=`</g>`;
  });
@@ -215,7 +216,7 @@ function flow(){
  tokens.forEach((t,i)=>{
   const y=yc(i);
   s+=`<g data-t="${i}"><path class="fg" d="M912,${y} H944" stroke-width="1.2"/>`;
-  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="vector(768)" x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
+  for(let b=0;b<3;b++)s+=`<rect class="more-bar" data-b="${b}" data-dim="hidden state of “${esc(showToken(t))}” after a later block · vector(768)" x="${944+b*12}" y="${y-15}" width="7" height="30" rx="2" fill="#d3e0fa" opacity="${0.9-b*0.25}"/>`;
   s+=`</g>`;
  });
  s+=`</g></g></g>`;

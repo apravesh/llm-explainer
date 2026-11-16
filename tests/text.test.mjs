@@ -113,7 +113,7 @@ test('embedding and probabilities also open in place, one part at a time',async(
 test('MLP opens into Linear → GELU → Linear, and bars report their size on hover',async()=>{
  const app=await read('src/text-app.mjs');
  for(const part of ['h = W<sub>1</sub> · x + b<sub>1</sub>','GELU(h) = h · Φ(h)','y = W<sub>2</sub> · GELU(h) + b<sub>2</sub>','3,072 × 768','768 × 3,072','output = x + y'])assert.ok(app.includes(part),part);
- for(const dim of ['data-dim="vector(768)"','data-dim="vector(3072)"','weights · matrix(768 × 768)','this head · vector(64)'])assert.ok(app.includes(dim),dim);
+ for(const dim of ['going into the block · vector(768)"','after attention · vector(768)"','after the MLP · vector(768)"','widened by W_in · vector(3072)"','after GELU · vector(3072)"','weights · matrix(768 × 768)','this head · vector(64)'])assert.ok(app.includes(dim),dim);
  assert.match(app,/size\(811,'768',0\)\+size\(859,'3,072',0\)\+size\(907,'768',0\)/,'the 3,072 middle is labelled in the overview');
  assert.match(app,/const sized=e\.target\.closest\('\[data-dim\]'\)/);
  // sizes: 12 heads of 64 make 768; the MLP widens four-fold
@@ -195,4 +195,18 @@ test('a hovered token also shows the token that really follows it, with the chan
  assert.match(app,/class="actual" hidden aria-hidden="true"/);assert.ok(app.includes('ACTUAL NEXT TOKEN'));
  assert.match(app,/const hit=at===null\?-1:list\.slice\(0,10\)\.findIndex\(r=>r\.token===tokens\[at\+1\]\)/,'a guess that is the real next token is marked in place');
  assert.match(app,/actual\.toggleAttribute\('hidden',at===null\|\|hit>=0\)/);
+});
+
+test('src/text-app.mjs: weights that exist once are drawn once (one Q/K/V block, one MLP)',async()=>{
+ const app=await (await import('node:fs/promises')).readFile(new URL('../src/text-app.mjs',import.meta.url),'utf8');
+ assert.match(app,/class="wblock"/);assert.equal((app.match(/class="wblock"/g)||[]).length,1);
+ assert.match(app,/the same for every (token|patch)/);assert.doesNotMatch(app,/curve\(142,y,232,y\+dy\)/,'no per-token Q, K, V squares');
+ assert.match(app,/class="mlp-one"/);assert.match(app,/MLP layer: W(_in|₁ and W₃) \(expansion, /);assert.match(app,/\(contraction, [\d,]+ → [\d,]+\) · the same weights for every (token|patch)/);
+});
+
+test('size hovers name the vector they describe, never a bare vector(n)',async()=>{
+ for(const f of ['src/text-app.mjs','src/vision-app.mjs','src/moe-page-app.mjs']){
+  const app=await read(f);assert.doesNotMatch(app,/data-dim="vector\(/,f);
+  for(const part of ['hidden state of ',' going into the block · vector(',' after attention · vector(',' after a later block · vector(','attention output of '])assert.ok(app.includes(part),f+': '+part);
+ }
 });
