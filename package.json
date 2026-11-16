@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Interactive full-dimension ViT/Pixtral vision encoders and a minimal MoE teaching chapter.",
+  "description": "A visual, first-time-reader guide to how large language models work.",
   "scripts": {
     "start": "node server.mjs",
     "test": "node --no-maglev --test tests/*.test.mjs",
