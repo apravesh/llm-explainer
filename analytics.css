@@ -216,3 +216,21 @@
 .pf-note{margin-top:10px;padding:10px 14px;border-left:3px solid #93a6d1;background:#f1f4fb;border-radius:0 8px 8px 0;font-size:.92em}
 
 .pf-symbols em{font-style:normal}
+
+/* 03 Optimizations: local and global attention layers */
+.lc-lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;margin:18px 0 22px;padding:22px 24px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.lc-grids{display:flex;gap:18px;flex-wrap:wrap}.lc-fig{margin:0;flex:1 1 200px;max-width:270px}
+.lc-fig figcaption{display:flex;flex-direction:column;font-size:13px;margin-bottom:4px}.lc-fig figcaption span{font-size:12px;color:var(--muted)}
+.lc-fig svg{width:100%;height:auto;display:block}.lc-axis{font:9px ui-monospace,monospace;fill:#9aa7b8;letter-spacing:.6px}
+.lc-cell{fill:#eef1f6}.lc-cell.future{fill:#f7f8fb}.lc-cell.on{fill:#b9a3d6}.lc-cell.hot{fill:#6d4aa6}
+.lc-count{margin:6px 0 0;font:12px ui-monospace,monospace;color:#4a3a78}
+.lc-slider{display:flex;flex-direction:row;align-items:center;gap:10px;white-space:nowrap;margin-top:12px;font-size:12.5px;color:var(--muted)}.lc-slider output{font:13px ui-monospace,monospace;color:#232e3a}
+.lc-controls{margin-top:0}.lc-patterns{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;margin:4px 0 12px}.lc-patterns label{display:flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+.lc-stack{display:flex;align-items:center;gap:4px;margin-bottom:14px}.lc-stack i{font:10px ui-monospace,monospace;font-style:normal;width:20px;height:22px;display:grid;place-items:center;border-radius:4px;background:#e6e0f1;color:#5b468a}
+.lc-stack i.global{background:#6d4aa6;color:#fff}.lc-stack span{font-size:11px;color:var(--muted);margin-left:8px}
+.lc-bar{display:grid;grid-template-columns:1fr auto;gap:2px 12px;margin-bottom:12px;font-size:13px}.lc-bar span{grid-column:1/-1}
+.lc-track{height:10px;border-radius:5px;background:#eef1f6;overflow:hidden;align-self:center}.lc-track i{display:block;height:100%;background:#6d4aa6;border-radius:5px;transition:width .35s}
+.lc-bar strong{font:13px ui-monospace,monospace}.lc-bar small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
+.lc-lab .lab-result{font-size:13.5px;line-height:1.6;margin:6px 0 8px}.lc-lab .vec-note{font-size:11.5px;color:var(--muted);margin:8px 0 0}
+@media(max-width:900px){.lc-lab{grid-template-columns:1fr}}
+.lc-slider input{width:180px;flex:none}
