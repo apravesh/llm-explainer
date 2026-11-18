@@ -28,3 +28,13 @@ test('the Parameters page has 03 Optimizations instead of the old calculator',as
  for(const m of html.matchAll(/href="#([a-z0-9-]+)"/g))assert.ok(html.includes(`id="${m[1]}"`),m[1]);
  assert.match(await read('glossary.html'),/analytics\.html#long-context/);
 });
+test('FLOPs are introduced on the Parameters page and defined in the glossary',async()=>{
+ const html=await read('analytics.html'),g=await read('glossary.html');
+ assert.match(html,/<b>FLOPs<\/b> are floating-point operations/);assert.match(html,/each badge counts FLOPs/);
+ assert.match(g,/id="term-flops"/);assert.match(g,/Not the same as FLOPS, operations per second/);
+});
+test('the Vision page opens with the big picture: image and text into one sequence for the language model',async()=>{
+ const html=await read('vision.html');
+ for(const part of ['id="big-picture"','Where the vision encoder sits','What bird is this?','A kingfisher.','ONE SEQUENCE','Language model','THIS PAGE','The prompt and answer are an illustration'])assert.ok(html.includes(part),part);
+ assert.ok(html.indexOf('id="big-picture"')<html.indexOf('id="explorer"'));
+});

@@ -165,7 +165,7 @@ function workCard(w, key) {
  const sum = lines => `<div class="pf-pop-sum">${lines.map(([a, b, d]) => `<div><span>${a}</span><b>= ${compactWork(b)}</b><small>${d}</small></div>`).join('')}</div>`;
  // per: operations for one token in one unit; extra: [[count, what, label after multiplying]]
  const scale = (label, per, first, extra = []) => { const lines = [[label, per, first]]; let run = per; for (const [k, what, tag] of extra) { run *= k; lines.push([`× ${n(k)} ${what}`, run, tag]); } if (toks > 1) { run *= toks; lines.push([`× ${n(toks)} tokens`, run, 'this workload']); } return sum(lines); };
- const share = f => `<p class="pf-pop-n"><b>${f ? compactWork(f) : '0'}</b> operations · ${pctText(pct(f, w.total))} of the work</p>`;
+ const share = f => `<p class="pf-pop-n"><b>${f ? compactWork(f) : '0'}</b> FLOPs · ${pctText(pct(f, w.total))} of the work</p>`;
  const flopsOf = k => w.parts.find(x => x.key === k)?.flops || 0;
  const plus = ops => ops.map(q => compactWork(q.flops)).join(' + ');
  if (key === 'attn') {
@@ -175,7 +175,7 @@ function workCard(w, key) {
   <p class="pf-pop-k">2 · Mixing (no weights at all)</p>${table([op('Q · Kᵀ', shape, mixOne / 2, 'score every pair'), op('weights · V', shape, mixOne / 2, 'blend the values')])}${sum([[`${compactWork(mixOne / 2)} + ${compactWork(mixOne / 2)}`, mixOne, 'one block'], [`× ${n(c.L)} blocks`, mixOne * c.L, 'this workload']])}${share(flopsOf('mix'))}
   <p>${write ? 'The new token is compared with every token already in the context, so this grows with the context length.' : 'Every token is compared with every other token, so this grows with n². Double the prompt and this part costs four times as much.'}</p>`;
  }
- if (key === 'mlp') { const ops = mlpOps(); return `<h4>MLP</h4>${table(ops)}${scale(plus(ops), perTok(ops), 'one token, one block', [[c.L, 'blocks', 'one token']])}${share(flopsOf('mlp'))}<p>About two operations per weight, for every token. This grows in step with the number of tokens.</p>`; }
+ if (key === 'mlp') { const ops = mlpOps(); return `<h4>MLP</h4>${table(ops)}${scale(plus(ops), perTok(ops), 'one token, one block', [[c.L, 'blocks', 'one token']])}${share(flopsOf('mlp'))}<p>About two FLOPs per weight, for every token. This grows in step with the number of tokens.</p>`; }
  if (key === 'experts') { const ops = mlpOps(); return `<h4>Experts · ${c.k} of ${c.E} run</h4>${table(ops)}${scale(plus(ops), perTok(ops), 'one token, one expert', [[c.k, 'experts that run', 'one token, one block'], [c.L, 'blocks', 'one token']])}${share(flopsOf('experts'))}<p>All ${c.E} experts are stored, but a token only pays for the ${c.k} it is sent to.</p>`; }
  if (key === 'router') { const ops = [op('W_r · x', `2 × ${c.E} × ${n(c.d)}`, tw(c.E, c.d), 'score the experts')]; return `<h4>Router</h4>${table(ops)}${scale(compactWork(ops[0].flops), ops[0].flops, 'one token, one block', [[c.L, 'blocks', 'one token']])}${share(flopsOf('router'))}<p>Choosing the experts costs almost nothing.</p>`; }
  if (key === 'head') { const f = flopsOf('head'); return `<h4>LM head</h4>${table([op('W_out · h', `2 × ${n(c.V)} × ${n(c.d)}`, f, 'score every token')])}${share(f)}<p>One row of the table per vocabulary token, but only for the last position: that is the one being predicted. It happens once, not once per token read.</p>`; }
@@ -194,7 +194,7 @@ function workInsight(w) {
  const c = w.config, share = k => pct(w.byCat[k] || 0, w.total), mix = share('mix'), n = v => Number(v).toLocaleString('en-US'), ws = k => pct(w.weights.byCat[k]?.stored || 0, w.weights.stored);
  const lead = w.mode === 'write' ? `Writing one more token after ${n(w.n)} tokens of context` : c.model === 'vision' ? `Reading an image of ${n(w.n)} patches` : `Reading a prompt of ${n(w.n)} tokens`;
  const emb = c.model === 'vision' ? '' : ` The vocabulary tables are ${pctText(ws('embed'))} of the weights and ${pctText(share('embed'))} of the work.`;
- return `${lead} takes about ${compactWork(w.total)} operations. Attention’s mixing step holds no weights at all, yet it is ${pctText(mix)} of the work here${w.mode === 'write' ? ', and it grows with every token already in the context' : mix > 30 ? ', because it grows with n²' : '; make the prompt longer and it takes over, because it grows with n²'}.${emb}`;
+ return `${lead} takes about ${compactWork(w.total)} FLOPs. Attention’s mixing step holds no weights at all, yet it is ${pctText(mix)} of the work here${w.mode === 'write' ? ', and it grows with every token already in the context' : mix > 30 ? ', because it grows with n²' : '; make the prompt longer and it takes over, because it grows with n²'}.${emb}`;
 }
 function renderWork() {
  const el = document.getElementById('pw-diagram'); if (!el) return;

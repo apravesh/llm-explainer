@@ -213,7 +213,7 @@
 .pf-flow .pf-wblock{fill:#f6f8fc;stroke:#d5dcea}
 .pf-flow .pf-thru{fill:none;stroke:#93a6d1;stroke-width:1.2}
 
-.pf-note{margin-top:10px;padding:10px 14px;border-left:3px solid #93a6d1;background:#f1f4fb;border-radius:0 8px 8px 0;font-size:.92em}
+p.pf-note{margin-top:10px;padding:10px 14px;border-left:3px solid #93a6d1;background:#f1f4fb;border-radius:0 8px 8px 0;font-size:.92em}
 
 .pf-symbols em{font-style:normal}
 

@@ -303,3 +303,19 @@ html.rope-overlay-open{overflow:hidden}
 .full-math-dialog h2{font-size:22px;color:#5c7594;font-weight:550;margin:5px 0 0}
 .fm-dialog-header>button{font-size:24px;color:#8f9eb3;border:1px solid #e0e7f1;border-radius:50%;width:30px;height:30px;line-height:1;background:#fff;cursor:pointer;padding:0}
 .fm-dialog-body{padding:15px 22px}
+
+/* The big picture: where the vision encoder sits in a multimodal model */
+.bp-scroll{overflow-x:auto;margin:6px 0 4px;padding:18px 20px;border:1px solid var(--line,#dfe4ec);border-radius:14px;background:#fff}
+.bp-svg{display:block;width:100%;min-width:860px;height:auto}
+.bp-label{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.4px;fill:#8a97a8}
+.bp-sub{font-size:11px;fill:#7b8798}.bp-sub.img{fill:#6d4aa6}.bp-sub.txt{fill:#3667e4}
+.bp-name{font-size:14px;font-weight:600;fill:#232e3a}
+.bp-box{fill:#f6f8fb;stroke:#c9d2de;stroke-width:1.2}.bp-box.here{fill:#f3eefa;stroke:#6d4aa6;stroke-width:1.6}.bp-box.lm{fill:#eef3fd;stroke:#93a6d1}
+.bp-tag{fill:#6d4aa6}.bp-tagtext{font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1.2px;fill:#fff}
+.bp-grid line,.bp-grid rect{stroke:#fff;stroke-width:1.2;opacity:.85}.bp-grid rect{stroke:#c9d2de;opacity:1}
+.bp-line{fill:none;stroke:#9aa7b8;stroke-width:1.4}
+.bp-quote{fill:#fff;stroke:#3667e4;stroke-width:1.2}.bp-quote.out{fill:#eef3fd}.bp-prompt{font-size:13px;fill:#232e3a}
+.bp-seq{fill:#fafbfd;stroke:#c9d2de;stroke-dasharray:3 4}.bp-chip.img{fill:#b9a3d6}.bp-chip.txt{fill:#8fa9ee}.bp-dots{font-size:14px;fill:#8a97a8}
+.bp-scroll+.vec-note{margin:8px 0 18px}
+.bp-tok{font-size:11.5px;fill:#232e3a}.bp-tok.img{fill:#6d4aa6}.bp-tok.txt{fill:#3667e4}
+.bp-thin{fill:none;stroke-width:1.1;opacity:.75}.bp-thin.img{stroke:#b9a3d6}.bp-thin.txt{stroke:#8fa9ee}

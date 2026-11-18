@@ -19,7 +19,7 @@ A visual, first-time-reader guide to how large language models work: what they d
 | Training | Pretraining | `pretraining.html` | A data pipeline, a small BPE tokenizer and a tiny transformer that really trains in the page. |
 | Training | Instruct | `post-training-instruct.html` | Chat templates, demonstration data and the assistant-only loss mask. |
 | Training | RL | `post-training-rl.html` | GRPO on a three-answer policy: rollouts, group advantages, updates and snapshots. |
-| Reference | Glossary | `glossary.html` | 66 short definitions, each linked to the chapter that shows it, plus outside resources. |
+| Reference | Glossary | `glossary.html` | 67 short definitions, each linked to the chapter that shows it, plus outside resources. |
 
 `index.html` is the home page. Every page shares one header (`site-header.css`) with the same groups.
 
@@ -41,7 +41,7 @@ Node.js 20+ is needed only for local tooling.
 
 ```sh
 node server.mjs                              # http://127.0.0.1:4173 (PORT overrides)
-node --no-maglev --test tests/*.test.mjs     # 737 tests
+node --no-maglev --test tests/*.test.mjs     # 739 tests
 node build.mjs                               # rebuilds standalone.html
 ```
 
