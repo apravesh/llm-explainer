@@ -47,7 +47,11 @@
 <p>The two scores that survived top-k go through a softmax, which turns them into two weights that add up to 100%. The expert the router preferred counts for more.</p>
 <h3>Step 3 · Weighted sum <span class="mx-new">different</span></h3>
 <p>Both chosen experts receive the same whole vector, not a piece each, and each returns a vector of the same size. Each output is multiplied by its weight and the two are added, number by number. Nothing is placed side by side, so the result has the same size as the input.</p>
-<p>That sum is then added to the token's vector through the residual connection, exactly where the MLP's output would be added in the text transformer. The next block cannot tell that an MoE layer was there.</p></section>
+<p>That sum is then added to the token's vector through the residual connection, exactly where the MLP's output would be added in the text transformer. The next block cannot tell that an MoE layer was there.</p>
+<h3>Why only the MLP, and not attention?</h3>
+<p>The MLP is where the weights are. In Mixtral one expert holds about 176 million weights, and the 8 experts of a block about 1.4 billion. The block's attention matrices together hold about 42 million. If the goal is to store more than each token has to use, the MLP is the part worth splitting.</p>
+<p>The MLP also works on one token at a time, so sending two tokens to different experts changes nothing for either. Attention is the one step where tokens meet: a token's Query is compared with every other token's Key. If tokens went to different attention experts, a Query from one expert would be compared with Keys from another, which were never trained to match, and the cache of earlier tokens' Keys and Values would have to be kept once per expert.</p>
+<p>Attention already has its own way of specialising: many heads per block, and attention weights that choose, token by token, what to read. So the common designs, Mixtral among them, keep attention shared and split only the MLP.</p></section>
 
 <section id="cost" class="lesson-section tx-article"><div class="section-heading"><p class="eyebrow">04 / STORED VS USED</p><h2>Stored vs used: why this is worth it</h2><p>In the text transformer, the number of weights the model has and the number it uses for one token are the same thing. An MoE pulls the two apart.</p></div>
 <div class="lab mx-cost" id="cost-comparison"></div>
