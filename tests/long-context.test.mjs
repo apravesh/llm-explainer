@@ -23,7 +23,7 @@ test('5 local : 1 global at 128K with a window of 1,024 keeps about a sixth of t
 test('the Parameters page has 03 Optimizations instead of the old calculator',async()=>{
  const html=await read('analytics.html');
  for(const part of ['01 / COUNT THE WEIGHTS','02 / COUNT THE WORK','03 / SPEND LESS','<h2>Optimizations</h2>','Long context: local and global attention layers','id="lc-lab"','src="src/long-context-app.mjs"','only the mask changes','Gemma 3','Mistral 7B','arxiv.org/abs/2503.19786','arxiv.org/abs/2310.06825','arithmetic, not measured speed or memory','href="#optimizations"'])assert.ok(html.includes(part),part);
- for(const gone of ['04 /','05 /','GQA','budget-form','architecture-budget','panel-gpu','id="calculator"'])assert.ok(!html.includes(gone),gone);
+ for(const gone of ['04 /','05 /','budget-form','architecture-budget','panel-gpu','id="calculator"'])assert.ok(!html.includes(gone),gone);
  assert.ok(html.indexOf('id="part-2"')<html.indexOf('id="optimizations"')&&html.indexOf('id="optimizations"')<html.indexOf('id="sources"'));
  for(const m of html.matchAll(/href="#([a-z0-9-]+)"/g))assert.ok(html.includes(`id="${m[1]}"`),m[1]);
  assert.match(await read('glossary.html'),/analytics\.html#long-context/);

@@ -8,12 +8,13 @@ test('glossary defines the course terminology, once each, concisely',()=>{
  assert.ok(terms.length>=60,`${terms.length} terms`);
  assert.equal(new Set(terms.map(t=>t.id)).size,terms.length,'unique ids');
  const names=terms.map(t=>t.term);
- for(const t of ['LLM','Training','Inference','RAG','OCR','VLM','GPU','YOLO','MoE','Dense model','Transformer','Token','Tokenization','Token ID','Embedding','Positional embedding','Attention','Query, Key, Value','Output projection','Logits','Pretraining','Mid-training','Post-training','Special tokens','Curriculum','Learning rate','Epoch','Loss curve','Distillation','Vision encoder','Thinking','Agent','Harness','Quantization','Diffusion','Speculative decoding','W&amp;B','Inference engine','CUDA'])assert.ok(names.includes(t),t);
+ for(const t of ['LLM','Training','Inference','RAG','OCR','VLM','GPU','YOLO','MoE','Dense model','Transformer','Token','Tokenization','Token ID','Embedding','Positional embedding','Attention','Causal','Query, Key, Value','Output projection','Logits','Pretraining','Mid-training','Post-training','Special tokens','Curriculum','Learning rate','Epoch','Loss curve','Distillation','Vision encoder','Thinking','Agent','Harness','Quantization','Diffusion','Speculative decoding','W&amp;B','Inference engine','CUDA'])assert.ok(names.includes(t),t);
  for(const t of terms){const words=t.def.replace(/<[^>]+>/g,'').trim().split(/\s+/).length;assert.ok(words>=5&&words<=48,`${t.term}: ${words} words`);}
  assert.match(html,new RegExp(`${terms.length} common terms`));
 });
 test('glossary gets the easily confused facts right',()=>{
  const def=name=>terms.find(t=>t.term===name).def;
+ assert.match(def('Causal'),/itself and earlier tokens, but not later ones/);assert.match(def('Causal'),/not cause-and-effect reasoning/);
  assert.match(def('YOLO'),/find and box objects/);assert.doesNotMatch(def('YOLO'),/segmentation/);
  assert.match(def('Inference engine'),/vLLM/);assert.match(def('Inference'),/weights do not change/);
  assert.match(def('RAG'),/built around the model, not inside it/);assert.match(def('Diffusion'),/not an LLM/i);
